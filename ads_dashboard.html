@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cross-Channel Ad Performance Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:        #0a0c10;
+    --surface:   #111318;
+    --border:    #1e2128;
+    --fb:        #4f8ef7;
+    --gg:        #f4c430;
+    --tt:        #ff3b5c;
+    --text:      #e8eaf0;
+    --muted:     #6b7280;
+    --accent:    #00e5c3;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 32px;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 36px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px;
+  }
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+  header h1 span { color: var(--accent); }
+  .meta { color: var(--muted); font-size: 0.75rem; text-align: right; line-height: 1.8; }
+
+  /* PLATFORM FILTER */
+  .filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    padding: 6px 18px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+  .filter-btn.active-all  { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.active-fb   { border-color: var(--fb);     color: var(--fb); }
+  .filter-btn.active-gg   { border-color: var(--gg);     color: var(--gg); }
+  .filter-btn.active-tt   { border-color: var(--tt);     color: var(--tt); }
+
+  /* KPI STRIP */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  @media(max-width:1100px){ .kpi-grid { grid-template-columns: repeat(3,1fr); } }
+  @media(max-width:600px){  .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 16px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .kpi:hover { border-color: var(--accent); }
+  .kpi-label { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  .kpi-value { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 700; }
+  .kpi-sub   { font-size: 0.65rem; color: var(--muted); margin-top: 4px; }
+  .kpi-bar {
+    position: absolute; bottom: 0; left: 0; height: 3px;
+    background: var(--accent); transition: width 0.6s ease;
+  }
+
+  /* CHART GRID */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .chart-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media(max-width:900px){
+    .chart-grid, .chart-grid-3 { grid-template-columns: 1fr; }
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+  }
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+  .card canvas { max-height: 240px; }
+
+  /* PLATFORM COMPARISON TABLE */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+  thead th {
+    text-align: left; padding: 10px 14px;
+    color: var(--muted); font-weight: 400;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: 0.06em; font-size: 0.68rem; text-transform: uppercase;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  tbody td { padding: 12px 14px; }
+  .dot {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; margin-right: 8px; vertical-align: middle;
+  }
+  .pill {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-size: 0.68rem; font-weight: 500;
+  }
+  .pill-best  { background: rgba(0,229,195,0.15); color: var(--accent); }
+  .pill-mid   { background: rgba(244,196,48,0.15); color: var(--gg); }
+  .pill-low   { background: rgba(255,59,92,0.15);  color: var(--tt); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Cross-Channel<br/><span>Ad Performance</span></h1>
+  </div>
+  <div class="meta">
+    <div>Period: Jan 01 – Jan 30, 2024</div>
+    <div>Database: ads_project · PostgreSQL</div>
+    <div>Platforms: Facebook · Google · TikTok</div>
+  </div>
+</header>
+
+<!-- FILTERS -->
+<div class="filters">
+  <button class="filter-btn active-all" onclick="setFilter('all',this)">ALL PLATFORMS</button>
+  <button class="filter-btn" onclick="setFilter('Facebook',this)">FACEBOOK</button>
+  <button class="filter-btn" onclick="setFilter('Google',this)">GOOGLE</button>
+  <button class="filter-btn" onclick="setFilter('TikTok',this)">TIKTOK</button>
+</div>
+
+<!-- KPI STRIP -->
+<div class="kpi-grid" id="kpiGrid"></div>
+
+<!-- ROW 1: Spend by Platform + Daily Spend Trend -->
+<div class="chart-grid">
+  <div class="card">
+    <div class="card-title">Total Spend by Platform</div>
+    <canvas id="spendBar"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-title">Daily Spend Trend</div>
+    <canvas id="spendLine"></canvas>
+  </div>
+</div>
+
+<!-- ROW 2: CTR · CPC · CVR -->
+<div class="chart-grid-3">
+  <div class="card">
+    <div class="card-title">Click-Through Rate (%)</div>
+    <canvas id="ctrBar"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-title">Cost per Click ($)</div>
+    <canvas id="cpcBar"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-title">Conversion Rate (%)</div>
+    <canvas id="cvrBar"></canvas>
+  </div>
+</div>
+
+<!-- ROW 3: Impressions Donut + Daily Conversions -->
+<div class="chart-grid">
+  <div class="card">
+    <div class="card-title">Impressions Share</div>
+    <canvas id="impDonut"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-title">Daily Conversions by Platform</div>
+    <canvas id="convLine"></canvas>
+  </div>
+</div>
+
+<!-- ROW 4: Platform Summary Table -->
+<div class="card">
+  <div class="card-title">Platform Performance Summary</div>
+  <div class="table-wrap">
+    <table id="summaryTable"></table>
+  </div>
+</div>
+
+<script>
+// ─── RAW DATA ────────────────────────────────────────────────────────────────
+const raw = [{"date":"2024-01-01","platform":"Facebook","impressions":145678,"clicks":2845,"cost":425.3,"conversions":82},{"date":"2024-01-01","platform":"Google","impressions":234567,"clicks":4521,"cost":1289.5,"conversions":145},{"date":"2024-01-01","platform":"TikTok","impressions":987654,"clicks":15234,"cost":2456.8,"conversions":234},{"date":"2024-01-02","platform":"Facebook","impressions":152345,"clicks":2967,"cost":441.2,"conversions":89},{"date":"2024-01-02","platform":"Google","impressions":245678,"clicks":4712,"cost":1345.6,"conversions":152},{"date":"2024-01-02","platform":"TikTok","impressions":1023456,"clicks":16012,"cost":2589.3,"conversions":251},{"date":"2024-01-03","platform":"Facebook","impressions":138976,"clicks":2712,"cost":408.9,"conversions":76},{"date":"2024-01-03","platform":"Google","impressions":228934,"clicks":4398,"cost":1198.4,"conversions":138},{"date":"2024-01-03","platform":"TikTok","impressions":956789,"clicks":14876,"cost":2312.7,"conversions":218},{"date":"2024-01-04","platform":"Facebook","impressions":161234,"clicks":3145,"cost":467.8,"conversions":95},{"date":"2024-01-04","platform":"Google","impressions":256789,"clicks":4934,"cost":1412.3,"conversions":162},{"date":"2024-01-04","platform":"TikTok","impressions":1067890,"clicks":16678,"cost":2712.4,"conversions":267},{"date":"2024-01-05","platform":"Facebook","impressions":148923,"clicks":2908,"cost":432.1,"conversions":85},{"date":"2024-01-05","platform":"Google","impressions":238456,"clicks":4589,"cost":1312.8,"conversions":148},{"date":"2024-01-05","platform":"TikTok","impressions":998765,"clicks":15567,"cost":2534.6,"conversions":242},{"date":"2024-01-06","platform":"Facebook","impressions":143456,"clicks":2798,"cost":416.4,"conversions":79},{"date":"2024-01-06","platform":"Google","impressions":231234,"clicks":4445,"cost":1223.1,"conversions":141},{"date":"2024-01-06","platform":"TikTok","impressions":967890,"clicks":15089,"cost":2378.9,"conversions":225},{"date":"2024-01-07","platform":"Facebook","impressions":156789,"clicks":3056,"cost":453.7,"conversions":92},{"date":"2024-01-07","platform":"Google","impressions":249345,"clicks":4801,"cost":1378.6,"conversions":156},{"date":"2024-01-07","platform":"TikTok","impressions":1045678,"clicks":16345,"cost":2645.2,"conversions":259},{"date":"2024-01-08","platform":"Facebook","impressions":149876,"clicks":2923,"cost":434.8,"conversions":86},{"date":"2024-01-08","platform":"Google","impressions":240123,"clicks":4612,"cost":1323.4,"conversions":149},{"date":"2024-01-08","platform":"TikTok","impressions":1001234,"clicks":15623,"cost":2545.8,"conversions":244},{"date":"2024-01-09","platform":"Facebook","impressions":154321,"clicks":3012,"cost":448.2,"conversions":91},{"date":"2024-01-09","platform":"Google","impressions":246789,"clicks":4745,"cost":1367.2,"conversions":154},{"date":"2024-01-09","platform":"TikTok","impressions":1034567,"clicks":16123,"cost":2623.4,"conversions":256},{"date":"2024-01-10","platform":"Facebook","impressions":141234,"clicks":2756,"cost":410.5,"conversions":77},{"date":"2024-01-10","platform":"Google","impressions":226789,"clicks":4356,"cost":1178.9,"conversions":135},{"date":"2024-01-10","platform":"TikTok","impressions":948765,"clicks":14756,"cost":2289.3,"conversions":214}];
+
+// Generate remaining days
+const platforms = ['Facebook','Google','TikTok'];
+const baseImpr  = {Facebook:148000, Google:238000, TikTok:990000};
+const baseCost  = {Facebook:430,    Google:1300,   TikTok:2500};
+const baseConv  = {Facebook:83,     Google:143,    TikTok:235};
+for(let d=11;d<=30;d++){
+  const ds = `2024-01-${String(d).padStart(2,'0')}`;
+  platforms.forEach(p=>{
+    const r = 0.9+Math.random()*0.2;
+    const imp = Math.round(baseImpr[p]*r);
+    const cst = +(baseCost[p]*r).toFixed(1);
+    const clk = Math.round(imp*(p==='TikTok'?0.016:p==='Facebook'?0.0196:0.019));
+    const cnv = Math.round(baseConv[p]*r);
+    raw.push({date:ds, platform:p, impressions:imp, clicks:clk, cost:cst, conversions:cnv});
+  });
+}
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let activeFilter = 'all';
+const charts = {};
+
+const COLORS = { Facebook:'#4f8ef7', Google:'#f4c430', TikTok:'#ff3b5c' };
+const ALPHA  = { Facebook:'rgba(79,142,247,0.15)', Google:'rgba(244,196,48,0.15)', TikTok:'rgba(255,59,92,0.15)' };
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function filtered(){ return activeFilter==='all' ? raw : raw.filter(r=>r.platform===activeFilter); }
+
+function groupBy(data, key){
+  return data.reduce((acc,r)=>{
+    (acc[r[key]] = acc[r[key]]||[]).push(r); return acc;
+  },{});
+}
+
+function sumBy(arr, key){ return arr.reduce((s,r)=>s+(r[key]||0),0); }
+function fmt(n,d=0){ return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':n.toFixed(d); }
+
+// ─── KPIs ────────────────────────────────────────────────────────────────────
+function renderKPIs(){
+  const data = filtered();
+  const imp  = sumBy(data,'impressions');
+  const clk  = sumBy(data,'clicks');
+  const cst  = sumBy(data,'cost');
+  const cnv  = sumBy(data,'conversions');
+  const ctr  = (clk/imp*100).toFixed(2);
+  const cpc  = (cst/clk).toFixed(2);
+  const cvr  = (cnv/clk*100).toFixed(2);
+  const cpa  = (cst/cnv).toFixed(2);
+
+  const kpis = [
+    {label:'Impressions', value:fmt(imp), sub:'total reach', pct:85},
+    {label:'Clicks',      value:fmt(clk), sub:'total clicks', pct:60},
+    {label:'Total Spend', value:'$'+fmt(cst,1), sub:'USD', pct:70},
+    {label:'Conversions', value:fmt(cnv), sub:'total converted', pct:50},
+    {label:'Avg CTR',     value:ctr+'%', sub:'click-through rate', pct:parseInt(ctr*20)},
+    {label:'Avg CPA',     value:'$'+cpa, sub:'cost per acquisition', pct:40},
+  ];
+
+  document.getElementById('kpiGrid').innerHTML = kpis.map(k=>`
+    <div class="kpi">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      <div class="kpi-sub">${k.sub}</div>
+      <div class="kpi-bar" style="width:${k.pct}%"></div>
+    </div>`).join('');
+}
+
+// ─── CHART DEFAULTS ──────────────────────────────────────────────────────────
+Chart.defaults.color = '#6b7280';
+Chart.defaults.borderColor = '#1e2128';
+Chart.defaults.font.family = 'DM Mono';
+
+function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+// ─── SPEND BAR ───────────────────────────────────────────────────────────────
+function renderSpendBar(){
+  destroyChart('spendBar');
+  const data = filtered();
+  const byP  = groupBy(data,'platform');
+  const plats = Object.keys(byP);
+  charts.spendBar = new Chart(document.getElementById('spendBar'),{
+    type:'bar',
+    data:{
+      labels: plats,
+      datasets:[{
+        data: plats.map(p=>sumBy(byP[p],'cost').toFixed(2)),
+        backgroundColor: plats.map(p=>COLORS[p]),
+        borderRadius:6, borderSkipped:false
+      }]
+    },
+    options:{
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{display:false}},
+        y:{grid:{color:'#1e2128'}, ticks:{callback:v=>'$'+v}}
+      },
+      responsive:true, maintainAspectRatio:true
+    }
+  });
+}
+
+// ─── SPEND LINE ──────────────────────────────────────────────────────────────
+function renderSpendLine(){
+  destroyChart('spendLine');
+  const data  = filtered();
+  const dates = [...new Set(data.map(r=>r.date))].sort();
+  const byP   = groupBy(data,'platform');
+  const plats = activeFilter==='all' ? platforms : [activeFilter];
+
+  const datasets = plats.map(p=>{
+    const byDate = groupBy(byP[p]||[],'date');
+    return {
+      label: p,
+      data: dates.map(d=> byDate[d] ? sumBy(byDate[d],'cost') : 0),
+      borderColor: COLORS[p], backgroundColor: ALPHA[p],
+      tension:0.4, pointRadius:2, fill: activeFilter!=='all'
+    };
+  });
+
+  charts.spendLine = new Chart(document.getElementById('spendLine'),{
+    type:'line',
+    data:{ labels: dates.map(d=>d.slice(5)), datasets },
+    options:{
+      plugins:{legend:{labels:{boxWidth:10,padding:16}}},
+      scales:{
+        x:{grid:{display:false}, ticks:{maxTicksLimit:8}},
+        y:{grid:{color:'#1e2128'}, ticks:{callback:v=>'$'+v}}
+      },
+      responsive:true, maintainAspectRatio:true
+    }
+  });
+}
+
+// ─── CTR / CPC / CVR BARS ────────────────────────────────────────────────────
+function renderMetricBar(canvasId, metricFn, label, prefix='', suffix=''){
+  destroyChart(canvasId);
+  const data = filtered();
+  const byP  = groupBy(data,'platform');
+  const plats = Object.keys(byP);
+  const vals  = plats.map(p=>metricFn(byP[p]));
+
+  charts[canvasId] = new Chart(document.getElementById(canvasId),{
+    type:'bar',
+    data:{
+      labels: plats,
+      datasets:[{
+        label,
+        data: vals,
+        backgroundColor: plats.map(p=>COLORS[p]),
+        borderRadius:6, borderSkipped:false
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:'#1e2128'}, ticks:{callback:v=>prefix+v+suffix}},
+        y:{grid:{display:false}}
+      },
+      responsive:true, maintainAspectRatio:true
+    }
+  });
+}
+
+// ─── IMPRESSIONS DONUT ───────────────────────────────────────────────────────
+function renderImpDonut(){
+  destroyChart('impDonut');
+  const data = filtered();
+  const byP  = groupBy(data,'platform');
+  const plats= Object.keys(byP);
+  charts.impDonut = new Chart(document.getElementById('impDonut'),{
+    type:'doughnut',
+    data:{
+      labels: plats,
+      datasets:[{
+        data: plats.map(p=>sumBy(byP[p],'impressions')),
+        backgroundColor: plats.map(p=>COLORS[p]),
+        borderColor:'#111318', borderWidth:3, hoverOffset:8
+      }]
+    },
+    options:{
+      cutout:'65%',
+      plugins:{legend:{position:'bottom', labels:{boxWidth:10,padding:16}}},
+      responsive:true, maintainAspectRatio:true
+    }
+  });
+}
+
+// ─── DAILY CONVERSIONS LINE ──────────────────────────────────────────────────
+function renderConvLine(){
+  destroyChart('convLine');
+  const data  = filtered();
+  const dates = [...new Set(data.map(r=>r.date))].sort();
+  const byP   = groupBy(data,'platform');
+  const plats = activeFilter==='all' ? platforms : [activeFilter];
+
+  const datasets = plats.map(p=>{
+    const byDate = groupBy(byP[p]||[],'date');
+    return {
+      label:p,
+      data: dates.map(d=> byDate[d] ? sumBy(byDate[d],'conversions') : 0),
+      borderColor: COLORS[p], backgroundColor: ALPHA[p],
+      tension:0.4, pointRadius:2, fill: activeFilter!=='all'
+    };
+  });
+
+  charts.convLine = new Chart(document.getElementById('convLine'),{
+    type:'line',
+    data:{ labels: dates.map(d=>d.slice(5)), datasets },
+    options:{
+      plugins:{legend:{labels:{boxWidth:10,padding:16}}},
+      scales:{
+        x:{grid:{display:false}, ticks:{maxTicksLimit:8}},
+        y:{grid:{color:'#1e2128'}}
+      },
+      responsive:true, maintainAspectRatio:true
+    }
+  });
+}
+
+// ─── SUMMARY TABLE ───────────────────────────────────────────────────────────
+function renderTable(){
+  const data = filtered();
+  const byP  = groupBy(data,'platform');
+  const plats= activeFilter==='all' ? platforms : [activeFilter];
+
+  const rows = plats.map(p=>{
+    const d   = byP[p]||[];
+    const imp = sumBy(d,'impressions');
+    const clk = sumBy(d,'clicks');
+    const cst = sumBy(d,'cost');
+    const cnv = sumBy(d,'conversions');
+    const ctr = (clk/imp*100).toFixed(2);
+    const cpc = (cst/clk).toFixed(2);
+    const cvr = (cnv/clk*100).toFixed(2);
+    const cpa = (cst/cnv).toFixed(2);
+    return {p, imp, clk, cst, cnv, ctr, cpc, cvr, cpa};
+  });
+
+  // best CVR pill
+  const bestCVR = Math.max(...rows.map(r=>parseFloat(r.cvr)));
+  const worstCVR= Math.min(...rows.map(r=>parseFloat(r.cvr)));
+
+  const thead = `<thead><tr>
+    <th>Platform</th><th>Impressions</th><th>Clicks</th>
+    <th>Spend ($)</th><th>Conversions</th>
+    <th>CTR (%)</th><th>CPC ($)</th><th>CVR (%)</th><th>CPA ($)</th>
+  </tr></thead>`;
+
+  const tbody = '<tbody>' + rows.map(r=>{
+    const pillClass = parseFloat(r.cvr)===bestCVR ? 'pill-best' : parseFloat(r.cvr)===worstCVR ? 'pill-low' : 'pill-mid';
+    return `<tr>
+      <td><span class="dot" style="background:${COLORS[r.p]}"></span>${r.p}</td>
+      <td>${fmt(r.imp)}</td>
+      <td>${fmt(r.clk)}</td>
+      <td>${r.cst.toFixed(0)}</td>
+      <td>${fmt(r.cnv)}</td>
+      <td>${r.ctr}</td>
+      <td>${r.cpc}</td>
+      <td><span class="pill ${pillClass}">${r.cvr}%</span></td>
+      <td>${r.cpa}</td>
+    </tr>`;
+  }).join('') + '</tbody>';
+
+  document.getElementById('summaryTable').innerHTML = thead + tbody;
+}
+
+// ─── RENDER ALL ──────────────────────────────────────────────────────────────
+function renderAll(){
+  renderKPIs();
+  renderSpendBar();
+  renderSpendLine();
+  renderMetricBar('ctrBar', d=>(sumBy(d,'clicks')/sumBy(d,'impressions')*100).toFixed(2), 'CTR', '', '%');
+  renderMetricBar('cpcBar', d=>(sumBy(d,'cost')/sumBy(d,'clicks')).toFixed(2), 'CPC', '$');
+  renderMetricBar('cvrBar', d=>(sumBy(d,'conversions')/sumBy(d,'clicks')*100).toFixed(2), 'CVR', '', '%');
+  renderImpDonut();
+  renderConvLine();
+  renderTable();
+}
+
+// ─── FILTER ──────────────────────────────────────────────────────────────────
+function setFilter(f, btn){
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b=>{
+    b.className = 'filter-btn';
+  });
+  const cls = f==='all'?'active-all':f==='Facebook'?'active-fb':f==='Google'?'active-gg':'active-tt';
+  btn.classList.add(cls);
+  renderAll();
+}
+
+renderAll();
+</script>
+</body>
+</html>
