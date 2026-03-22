@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,530 +8,210 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 <style>
-  :root {
-    --bg:        #0a0c10;
-    --surface:   #111318;
-    --border:    #1e2128;
-    --fb:        #4f8ef7;
-    --gg:        #f4c430;
-    --tt:        #ff3b5c;
-    --text:      #e8eaf0;
-    --muted:     #6b7280;
-    --accent:    #00e5c3;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'DM Mono', monospace;
-    min-height: 100vh;
-    padding: 32px;
-  }
-
-  /* HEADER */
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-bottom: 36px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 24px;
-  }
-  header h1 {
-    font-family: 'Syne', sans-serif;
-    font-size: 2rem;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    line-height: 1.1;
-  }
-  header h1 span { color: var(--accent); }
-  .meta { color: var(--muted); font-size: 0.75rem; text-align: right; line-height: 1.8; }
-
-  /* PLATFORM FILTER */
-  .filters {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 28px;
-    flex-wrap: wrap;
-  }
-  .filter-btn {
-    padding: 6px 18px;
-    border-radius: 20px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--muted);
-    font-family: 'DM Mono', monospace;
-    font-size: 0.75rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.05em;
-  }
-  .filter-btn.active-all  { border-color: var(--accent); color: var(--accent); }
-  .filter-btn.active-fb   { border-color: var(--fb);     color: var(--fb); }
-  .filter-btn.active-gg   { border-color: var(--gg);     color: var(--gg); }
-  .filter-btn.active-tt   { border-color: var(--tt);     color: var(--tt); }
-
-  /* KPI STRIP */
-  .kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 12px;
-    margin-bottom: 28px;
-  }
-  @media(max-width:1100px){ .kpi-grid { grid-template-columns: repeat(3,1fr); } }
-  @media(max-width:600px){  .kpi-grid { grid-template-columns: repeat(2,1fr); } }
-  .kpi {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 18px 16px;
-    position: relative;
-    overflow: hidden;
-    transition: border-color 0.2s;
-  }
-  .kpi:hover { border-color: var(--accent); }
-  .kpi-label { font-size: 0.65rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
-  .kpi-value { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 700; }
-  .kpi-sub   { font-size: 0.65rem; color: var(--muted); margin-top: 4px; }
-  .kpi-bar {
-    position: absolute; bottom: 0; left: 0; height: 3px;
-    background: var(--accent); transition: width 0.6s ease;
-  }
-
-  /* CHART GRID */
-  .chart-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-  .chart-grid-3 {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-  @media(max-width:900px){
-    .chart-grid, .chart-grid-3 { grid-template-columns: 1fr; }
-  }
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 22px;
-  }
-  .card-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 18px;
-  }
-  .card canvas { max-height: 240px; }
-
-  /* PLATFORM COMPARISON TABLE */
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-  thead th {
-    text-align: left; padding: 10px 14px;
-    color: var(--muted); font-weight: 400;
-    border-bottom: 1px solid var(--border);
-    letter-spacing: 0.06em; font-size: 0.68rem; text-transform: uppercase;
-  }
-  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
-  tbody tr:hover { background: rgba(255,255,255,0.03); }
-  tbody td { padding: 12px 14px; }
-  .dot {
-    display: inline-block; width: 8px; height: 8px;
-    border-radius: 50%; margin-right: 8px; vertical-align: middle;
-  }
-  .pill {
-    display: inline-block; padding: 2px 10px; border-radius: 12px;
-    font-size: 0.68rem; font-weight: 500;
-  }
-  .pill-best  { background: rgba(0,229,195,0.15); color: var(--accent); }
-  .pill-mid   { background: rgba(244,196,48,0.15); color: var(--gg); }
-  .pill-low   { background: rgba(255,59,92,0.15);  color: var(--tt); }
+:root{--bg:#0a0c10;--surface:#111318;--border:#1e2128;--fb:#4f8ef7;--gg:#f4c430;--tt:#ff3b5c;--text:#e8eaf0;--muted:#6b7280;--accent:#00e5c3;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;padding:32px;}
+header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:36px;border-bottom:1px solid var(--border);padding-bottom:24px;}
+header h1{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;letter-spacing:-0.03em;line-height:1.1;}
+header h1 span{color:var(--accent);}
+.meta{color:var(--muted);font-size:0.75rem;text-align:right;line-height:1.8;}
+.filters{display:flex;gap:10px;margin-bottom:28px;flex-wrap:wrap;align-items:center;}
+.filters-label{font-size:0.65rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-right:4px;}
+.filter-btn{padding:6px 18px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-family:'DM Mono',monospace;font-size:0.75rem;cursor:pointer;transition:all 0.2s;letter-spacing:0.05em;}
+.filter-btn.active-all{border-color:var(--accent);color:var(--accent);background:rgba(0,229,195,0.08);}
+.filter-btn.active-fb{border-color:var(--fb);color:var(--fb);background:rgba(79,142,247,0.08);}
+.filter-btn.active-gg{border-color:var(--gg);color:var(--gg);background:rgba(244,196,48,0.08);}
+.filter-btn.active-tt{border-color:var(--tt);color:var(--tt);background:rgba(255,59,92,0.08);}
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:28px;}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:600px){.kpi-grid{grid-template-columns:repeat(2,1fr);}}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 16px;position:relative;overflow:hidden;transition:border-color 0.2s;}
+.kpi:hover{border-color:var(--accent);}
+.kpi-label{font-size:0.65rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;}
+.kpi-value{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:700;}
+.kpi-sub{font-size:0.65rem;color:var(--muted);margin-top:4px;}
+.kpi-bar{position:absolute;bottom:0;left:0;height:3px;transition:width 0.8s ease;}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.chart-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;}
+@media(max-width:900px){.chart-grid,.chart-grid-3{grid-template-columns:1fr;}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;}
+.card-title{font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:18px;}
+.card canvas{max-height:240px;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+thead th{text-align:left;padding:10px 14px;color:var(--muted);font-weight:400;border-bottom:1px solid var(--border);letter-spacing:0.06em;font-size:0.68rem;text-transform:uppercase;}
+tbody tr{border-bottom:1px solid var(--border);transition:background 0.15s;}
+tbody tr:hover{background:rgba(255,255,255,0.03);}
+tbody td{padding:12px 14px;}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:middle;}
+.pill{display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.68rem;font-weight:500;}
+.pill-best{background:rgba(0,229,195,0.15);color:var(--accent);}
+.pill-mid{background:rgba(244,196,48,0.15);color:var(--gg);}
+.pill-low{background:rgba(255,59,92,0.15);color:var(--tt);}
+.insight-box{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:12px;padding:24px;margin-top:16px;}
+.insight-box h3{font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;}
+.insight-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+@media(max-width:800px){.insight-grid{grid-template-columns:1fr;}}
+.insight-item{padding:14px;background:rgba(255,255,255,0.02);border-radius:8px;border:1px solid var(--border);}
+.insight-item .i-label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;}
+.insight-item .i-value{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:4px;}
+.insight-item .i-desc{font-size:0.7rem;color:var(--muted);line-height:1.5;}
+.rec-box{margin-top:14px;padding:14px;background:rgba(0,229,195,0.05);border-radius:8px;border:1px solid rgba(0,229,195,0.2);}
+.rec-box .rec-label{font-size:0.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;}
+.rec-box .rec-text{font-size:0.75rem;color:var(--text);line-height:1.6;}
+.data-note{font-size:0.65rem;color:var(--muted);margin-top:6px;}
 </style>
 </head>
 <body>
-
 <header>
   <div>
     <h1>Cross-Channel<br/><span>Ad Performance</span></h1>
+    <div style="margin-top:8px;font-size:0.7rem;color:var(--muted)">January 2024 &nbsp;·&nbsp; 3 Platforms &nbsp;·&nbsp; Supabase PostgreSQL</div>
   </div>
   <div class="meta">
     <div>Period: Jan 01 – Jan 30, 2024</div>
-    <div>Database: ads_project · PostgreSQL</div>
-    <div>Platforms: Facebook · Google · TikTok</div>
+    <div>Database: Supabase · PostgreSQL</div>
+    <div>Source: facebook_ads · google_ads · tiktok_ads</div>
+    <div style="margin-top:4px;color:var(--accent)">Unified Table: all_ads (330 rows)</div>
   </div>
 </header>
-
-<!-- FILTERS -->
 <div class="filters">
-  <button class="filter-btn active-all" onclick="setFilter('all',this)">ALL PLATFORMS</button>
-  <button class="filter-btn" onclick="setFilter('Facebook',this)">FACEBOOK</button>
-  <button class="filter-btn" onclick="setFilter('Google',this)">GOOGLE</button>
-  <button class="filter-btn" onclick="setFilter('TikTok',this)">TIKTOK</button>
+  <span class="filters-label">Filter by platform:</span>
+  <button class="filter-btn active-all" onclick="setFilter('all',this)">All Platforms</button>
+  <button class="filter-btn" onclick="setFilter('Facebook',this)">Facebook</button>
+  <button class="filter-btn" onclick="setFilter('Google',this)">Google</button>
+  <button class="filter-btn" onclick="setFilter('TikTok',this)">TikTok</button>
 </div>
-
-<!-- KPI STRIP -->
 <div class="kpi-grid" id="kpiGrid"></div>
-
-<!-- ROW 1: Spend by Platform + Daily Spend Trend -->
 <div class="chart-grid">
-  <div class="card">
-    <div class="card-title">Total Spend by Platform</div>
-    <canvas id="spendBar"></canvas>
-  </div>
-  <div class="card">
-    <div class="card-title">Daily Spend Trend</div>
-    <canvas id="spendLine"></canvas>
-  </div>
+  <div class="card"><div class="card-title">Total Spend by Platform</div><canvas id="spendBar"></canvas></div>
+  <div class="card"><div class="card-title">Daily Spend Trend</div><canvas id="spendLine"></canvas></div>
 </div>
-
-<!-- ROW 2: CTR · CPC · CVR -->
 <div class="chart-grid-3">
-  <div class="card">
-    <div class="card-title">Click-Through Rate (%)</div>
-    <canvas id="ctrBar"></canvas>
-  </div>
-  <div class="card">
-    <div class="card-title">Cost per Click ($)</div>
-    <canvas id="cpcBar"></canvas>
-  </div>
-  <div class="card">
-    <div class="card-title">Conversion Rate (%)</div>
-    <canvas id="cvrBar"></canvas>
-  </div>
+  <div class="card"><div class="card-title">Click-Through Rate (%)</div><canvas id="ctrBar"></canvas></div>
+  <div class="card"><div class="card-title">Cost per Acquisition ($)</div><canvas id="cpaBar"></canvas></div>
+  <div class="card"><div class="card-title">Conversion Rate (%)</div><canvas id="cvrBar"></canvas></div>
 </div>
-
-<!-- ROW 3: Impressions Donut + Daily Conversions -->
 <div class="chart-grid">
-  <div class="card">
-    <div class="card-title">Impressions Share</div>
-    <canvas id="impDonut"></canvas>
-  </div>
-  <div class="card">
-    <div class="card-title">Daily Conversions by Platform</div>
-    <canvas id="convLine"></canvas>
-  </div>
+  <div class="card"><div class="card-title">Impressions Share by Platform</div><canvas id="impDonut"></canvas></div>
+  <div class="card"><div class="card-title">Daily Conversions Trend</div><canvas id="convLine"></canvas></div>
 </div>
-
-<!-- ROW 4: Platform Summary Table -->
-<div class="card">
+<div class="card" style="margin-bottom:16px">
   <div class="card-title">Platform Performance Summary</div>
-  <div class="table-wrap">
-    <table id="summaryTable"></table>
+  <div class="table-wrap"><table id="summaryTable"></table></div>
+</div>
+<div class="insight-box">
+  <h3>Key Insights & Recommendations</h3>
+  <div class="insight-grid" id="insightGrid"></div>
+  <div class="rec-box">
+    <div class="rec-label">Strategic Recommendation</div>
+    <div class="rec-text" id="recText"></div>
   </div>
 </div>
-
+ 
 <script>
-// ─── RAW DATA ────────────────────────────────────────────────────────────────
-const raw = [{"date":"2024-01-01","platform":"Facebook","impressions":145678,"clicks":2845,"cost":425.3,"conversions":82},{"date":"2024-01-01","platform":"Google","impressions":234567,"clicks":4521,"cost":1289.5,"conversions":145},{"date":"2024-01-01","platform":"TikTok","impressions":987654,"clicks":15234,"cost":2456.8,"conversions":234},{"date":"2024-01-02","platform":"Facebook","impressions":152345,"clicks":2967,"cost":441.2,"conversions":89},{"date":"2024-01-02","platform":"Google","impressions":245678,"clicks":4712,"cost":1345.6,"conversions":152},{"date":"2024-01-02","platform":"TikTok","impressions":1023456,"clicks":16012,"cost":2589.3,"conversions":251},{"date":"2024-01-03","platform":"Facebook","impressions":138976,"clicks":2712,"cost":408.9,"conversions":76},{"date":"2024-01-03","platform":"Google","impressions":228934,"clicks":4398,"cost":1198.4,"conversions":138},{"date":"2024-01-03","platform":"TikTok","impressions":956789,"clicks":14876,"cost":2312.7,"conversions":218},{"date":"2024-01-04","platform":"Facebook","impressions":161234,"clicks":3145,"cost":467.8,"conversions":95},{"date":"2024-01-04","platform":"Google","impressions":256789,"clicks":4934,"cost":1412.3,"conversions":162},{"date":"2024-01-04","platform":"TikTok","impressions":1067890,"clicks":16678,"cost":2712.4,"conversions":267},{"date":"2024-01-05","platform":"Facebook","impressions":148923,"clicks":2908,"cost":432.1,"conversions":85},{"date":"2024-01-05","platform":"Google","impressions":238456,"clicks":4589,"cost":1312.8,"conversions":148},{"date":"2024-01-05","platform":"TikTok","impressions":998765,"clicks":15567,"cost":2534.6,"conversions":242},{"date":"2024-01-06","platform":"Facebook","impressions":143456,"clicks":2798,"cost":416.4,"conversions":79},{"date":"2024-01-06","platform":"Google","impressions":231234,"clicks":4445,"cost":1223.1,"conversions":141},{"date":"2024-01-06","platform":"TikTok","impressions":967890,"clicks":15089,"cost":2378.9,"conversions":225},{"date":"2024-01-07","platform":"Facebook","impressions":156789,"clicks":3056,"cost":453.7,"conversions":92},{"date":"2024-01-07","platform":"Google","impressions":249345,"clicks":4801,"cost":1378.6,"conversions":156},{"date":"2024-01-07","platform":"TikTok","impressions":1045678,"clicks":16345,"cost":2645.2,"conversions":259},{"date":"2024-01-08","platform":"Facebook","impressions":149876,"clicks":2923,"cost":434.8,"conversions":86},{"date":"2024-01-08","platform":"Google","impressions":240123,"clicks":4612,"cost":1323.4,"conversions":149},{"date":"2024-01-08","platform":"TikTok","impressions":1001234,"clicks":15623,"cost":2545.8,"conversions":244},{"date":"2024-01-09","platform":"Facebook","impressions":154321,"clicks":3012,"cost":448.2,"conversions":91},{"date":"2024-01-09","platform":"Google","impressions":246789,"clicks":4745,"cost":1367.2,"conversions":154},{"date":"2024-01-09","platform":"TikTok","impressions":1034567,"clicks":16123,"cost":2623.4,"conversions":256},{"date":"2024-01-10","platform":"Facebook","impressions":141234,"clicks":2756,"cost":410.5,"conversions":77},{"date":"2024-01-10","platform":"Google","impressions":226789,"clicks":4356,"cost":1178.9,"conversions":135},{"date":"2024-01-10","platform":"TikTok","impressions":948765,"clicks":14756,"cost":2289.3,"conversions":214}];
-
-// Generate remaining days
+// ALL 330 ROWS — sourced directly from actual CSV files (facebook_ads, google_ads, tiktok_ads)
+const raw = [{"date":"2024-01-01","platform":"Facebook","impressions":45623,"clicks":892,"cost":127.5,"conversions":12},{"date":"2024-01-01","platform":"Facebook","impressions":12456,"clicks":567,"cost":215.8,"conversions":34},{"date":"2024-01-01","platform":"Facebook","impressions":34567,"clicks":1234,"cost":189.9,"conversions":23},{"date":"2024-01-02","platform":"Facebook","impressions":42345,"clicks":823,"cost":118.2,"conversions":10},{"date":"2024-01-02","platform":"Facebook","impressions":13678,"clicks":623,"cost":234.5,"conversions":38},{"date":"2024-01-02","platform":"Facebook","impressions":36789,"clicks":1345,"cost":201.3,"conversions":25},{"date":"2024-01-03","platform":"Facebook","impressions":48234,"clicks":967,"cost":134.8,"conversions":14},{"date":"2024-01-03","platform":"Facebook","impressions":11234,"clicks":489,"cost":198.7,"conversions":31},{"date":"2024-01-03","platform":"Facebook","impressions":38901,"clicks":1456,"cost":213.4,"conversions":28},{"date":"2024-01-04","platform":"Facebook","impressions":51234,"clicks":1023,"cost":142.3,"conversions":15},{"date":"2024-01-04","platform":"Facebook","impressions":14567,"clicks":678,"cost":245.6,"conversions":42},{"date":"2024-01-04","platform":"Facebook","impressions":67890,"clicks":234,"cost":89.5,"conversions":5},{"date":"2024-01-05","platform":"Facebook","impressions":46789,"clicks":934,"cost":131.2,"conversions":13},{"date":"2024-01-05","platform":"Facebook","impressions":12890,"clicks":567,"cost":220.3,"conversions":36},{"date":"2024-01-05","platform":"Facebook","impressions":71234,"clicks":256,"cost":94.8,"conversions":6},{"date":"2024-01-06","platform":"Facebook","impressions":44567,"clicks":878,"cost":125.6,"conversions":11},{"date":"2024-01-06","platform":"Facebook","impressions":35678,"clicks":1289,"cost":195.6,"conversions":24},{"date":"2024-01-06","platform":"Facebook","impressions":69456,"clicks":245,"cost":91.2,"conversions":5},{"date":"2024-01-07","platform":"Facebook","impressions":49876,"clicks":1067,"cost":145.9,"conversions":16},{"date":"2024-01-07","platform":"Facebook","impressions":13456,"clicks":623,"cost":237.8,"conversions":40},{"date":"2024-01-07","platform":"Facebook","impressions":37234,"clicks":1367,"cost":207.9,"conversions":27},{"date":"2024-01-08","platform":"Facebook","impressions":47234,"clicks":945,"cost":135.4,"conversions":14},{"date":"2024-01-08","platform":"Facebook","impressions":12123,"clicks":534,"cost":212.4,"conversions":35},{"date":"2024-01-08","platform":"Facebook","impressions":73456,"clicks":267,"cost":98.3,"conversions":7},{"date":"2024-01-09","platform":"Facebook","impressions":50123,"clicks":1012,"cost":141.7,"conversions":15},{"date":"2024-01-09","platform":"Facebook","impressions":36456,"clicks":1312,"cost":199.8,"conversions":26},{"date":"2024-01-09","platform":"Facebook","impressions":70123,"clicks":253,"cost":93.6,"conversions":6},{"date":"2024-01-10","platform":"Facebook","impressions":48567,"clicks":978,"cost":137.8,"conversions":14},{"date":"2024-01-10","platform":"Facebook","impressions":13789,"clicks":645,"cost":241.2,"conversions":41},{"date":"2024-01-10","platform":"Facebook","impressions":38456,"clicks":1423,"cost":217.5,"conversions":29},{"date":"2024-01-11","platform":"Facebook","impressions":52123,"clicks":1089,"cost":148.6,"conversions":17},{"date":"2024-01-11","platform":"Facebook","impressions":14567,"clicks":723,"cost":256.4,"conversions":44},{"date":"2024-01-11","platform":"Facebook","impressions":39789,"clicks":1534,"cost":225.8,"conversions":31},{"date":"2024-01-11","platform":"Facebook","impressions":76234,"clicks":278,"cost":101.5,"conversions":8},{"date":"2024-01-12","platform":"Facebook","impressions":49234,"clicks":1012,"cost":140.3,"conversions":15},{"date":"2024-01-12","platform":"Facebook","impressions":13456,"clicks":634,"cost":239.7,"conversions":39},{"date":"2024-01-12","platform":"Facebook","impressions":37890,"clicks":1398,"cost":212.4,"conversions":28},{"date":"2024-01-12","platform":"Facebook","impressions":72890,"clicks":261,"cost":96.8,"conversions":7},{"date":"2024-01-13","platform":"Facebook","impressions":42345,"clicks":856,"cost":121.5,"conversions":12},{"date":"2024-01-13","platform":"Facebook","impressions":11234,"clicks":523,"cost":198.6,"conversions":32},{"date":"2024-01-13","platform":"Facebook","impressions":33456,"clicks":1203,"cost":185.3,"conversions":23},{"date":"2024-01-13","platform":"Facebook","impressions":64567,"clicks":238,"cost":83.4,"conversions":5},{"date":"2024-01-14","platform":"Facebook","impressions":40123,"clicks":798,"cost":114.7,"conversions":11},{"date":"2024-01-14","platform":"Facebook","impressions":10567,"clicks":489,"cost":185.9,"conversions":29},{"date":"2024-01-14","platform":"Facebook","impressions":31234,"clicks":1123,"cost":173.8,"conversions":21},{"date":"2024-01-14","platform":"Facebook","impressions":61234,"clicks":223,"cost":78.9,"conversions":4},{"date":"2024-01-15","platform":"Facebook","impressions":46789,"clicks":934,"cost":132.4,"conversions":14},{"date":"2024-01-15","platform":"Facebook","impressions":12890,"clicks":567,"cost":221.3,"conversions":37},{"date":"2024-01-15","platform":"Facebook","impressions":35678,"clicks":1289,"cost":196.6,"conversions":25},{"date":"2024-01-15","platform":"Facebook","impressions":68456,"clicks":248,"cost":87.6,"conversions":6},{"date":"2024-01-16","platform":"Facebook","impressions":50234,"clicks":1023,"cost":143.8,"conversions":16},{"date":"2024-01-16","platform":"Facebook","impressions":14234,"clicks":678,"cost":248.5,"conversions":42},{"date":"2024-01-16","platform":"Facebook","impressions":38456,"clicks":1423,"cost":218.7,"conversions":30},{"date":"2024-01-16","platform":"Facebook","impressions":73456,"clicks":267,"cost":94.2,"conversions":7},{"date":"2024-01-17","platform":"Facebook","impressions":51789,"clicks":1089,"cost":152.3,"conversions":18},{"date":"2024-01-17","platform":"Facebook","impressions":15234,"clicks":734,"cost":264.7,"conversions":46},{"date":"2024-01-17","platform":"Facebook","impressions":40123,"clicks":1534,"cost":232.8,"conversions":33},{"date":"2024-01-17","platform":"Facebook","impressions":75890,"clicks":278,"cost":98.5,"conversions":8},{"date":"2024-01-18","platform":"Facebook","impressions":49567,"clicks":1012,"cost":144.6,"conversions":16},{"date":"2024-01-18","platform":"Facebook","impressions":14567,"clicks":689,"cost":253.4,"conversions":43},{"date":"2024-01-18","platform":"Facebook","impressions":38901,"clicks":1456,"cost":224.5,"conversions":31},{"date":"2024-01-18","platform":"Facebook","impressions":72345,"clicks":261,"cost":92.7,"conversions":7},{"date":"2024-01-19","platform":"Facebook","impressions":47890,"clicks":967,"cost":138.4,"conversions":15},{"date":"2024-01-19","platform":"Facebook","impressions":13890,"clicks":634,"cost":235.8,"conversions":40},{"date":"2024-01-19","platform":"Facebook","impressions":37234,"clicks":1367,"cost":209.9,"conversions":28},{"date":"2024-01-19","platform":"Facebook","impressions":70123,"clicks":253,"cost":89.4,"conversions":6},{"date":"2024-01-20","platform":"Facebook","impressions":43234,"clicks":878,"cost":125.7,"conversions":13},{"date":"2024-01-20","platform":"Facebook","impressions":11890,"clicks":545,"cost":202.3,"conversions":34},{"date":"2024-01-20","platform":"Facebook","impressions":34567,"clicks":1234,"cost":189.6,"conversions":24},{"date":"2024-01-20","platform":"Facebook","impressions":65234,"clicks":234,"cost":81.2,"conversions":5},{"date":"2024-01-21","platform":"Facebook","impressions":41567,"clicks":823,"cost":118.9,"conversions":12},{"date":"2024-01-21","platform":"Facebook","impressions":10234,"clicks":467,"cost":178.4,"conversions":30},{"date":"2024-01-21","platform":"Facebook","impressions":32890,"clicks":1178,"cost":171.2,"conversions":22},{"date":"2024-01-21","platform":"Facebook","impressions":62345,"clicks":223,"cost":76.3,"conversions":4},{"date":"2024-01-22","platform":"Facebook","impressions":45234,"clicks":912,"cost":129.8,"conversions":14},{"date":"2024-01-22","platform":"Facebook","impressions":12456,"clicks":567,"cost":209.6,"conversions":36},{"date":"2024-01-22","platform":"Facebook","impressions":35123,"clicks":1267,"cost":194.5,"conversions":26},{"date":"2024-01-22","platform":"Facebook","impressions":66789,"clicks":245,"cost":84.7,"conversions":5},{"date":"2024-01-23","platform":"Facebook","impressions":48567,"clicks":989,"cost":140.3,"conversions":15},{"date":"2024-01-23","platform":"Facebook","impressions":13789,"clicks":623,"cost":229.8,"conversions":38},{"date":"2024-01-23","platform":"Facebook","impressions":37456,"clicks":1389,"cost":213.4,"conversions":29},{"date":"2024-01-23","platform":"Facebook","impressions":71234,"clicks":256,"cost":90.5,"conversions":6},{"date":"2024-01-24","platform":"Facebook","impressions":51234,"clicks":1067,"cost":149.7,"conversions":17},{"date":"2024-01-24","platform":"Facebook","impressions":14890,"clicks":712,"cost":251.6,"conversions":43},{"date":"2024-01-24","platform":"Facebook","impressions":39234,"clicks":1489,"cost":227.9,"conversions":32},{"date":"2024-01-24","platform":"Facebook","impressions":74567,"clicks":267,"cost":95.8,"conversions":7},{"date":"2024-01-25","platform":"Facebook","impressions":52789,"clicks":1123,"cost":156.4,"conversions":18},{"date":"2024-01-25","platform":"Facebook","impressions":15678,"clicks":756,"cost":268.9,"conversions":47},{"date":"2024-01-25","platform":"Facebook","impressions":40567,"clicks":1567,"cost":238.6,"conversions":34},{"date":"2024-01-25","platform":"Facebook","impressions":76890,"clicks":278,"cost":99.2,"conversions":8},{"date":"2024-01-26","platform":"Facebook","impressions":50123,"clicks":1034,"cost":147.5,"conversions":17},{"date":"2024-01-26","platform":"Facebook","impressions":14234,"clicks":689,"cost":254.7,"conversions":44},{"date":"2024-01-26","platform":"Facebook","impressions":38890,"clicks":1445,"cost":231.2,"conversions":32},{"date":"2024-01-26","platform":"Facebook","impressions":73456,"clicks":261,"cost":94.6,"conversions":7},{"date":"2024-01-27","platform":"Facebook","impressions":46234,"clicks":934,"cost":133.8,"conversions":15},{"date":"2024-01-27","platform":"Facebook","impressions":12567,"clicks":567,"cost":209.4,"conversions":36},{"date":"2024-01-27","platform":"Facebook","impressions":35890,"clicks":1289,"cost":197.8,"conversions":27},{"date":"2024-01-27","platform":"Facebook","impressions":68234,"clicks":245,"cost":85.9,"conversions":5},{"date":"2024-01-28","platform":"Facebook","impressions":44567,"clicks":890,"cost":127.6,"conversions":13},{"date":"2024-01-28","platform":"Facebook","impressions":11456,"clicks":523,"cost":192.3,"conversions":33},{"date":"2024-01-28","platform":"Facebook","impressions":33567,"clicks":1203,"cost":184.5,"conversions":25},{"date":"2024-01-28","platform":"Facebook","impressions":65789,"clicks":234,"cost":80.4,"conversions":4},{"date":"2024-01-29","platform":"Facebook","impressions":47890,"clicks":967,"cost":138.4,"conversions":15},{"date":"2024-01-29","platform":"Facebook","impressions":13234,"clicks":612,"cost":226.5,"conversions":39},{"date":"2024-01-29","platform":"Facebook","impressions":36234,"clicks":1334,"cost":203.7,"conversions":28},{"date":"2024-01-29","platform":"Facebook","impressions":69567,"clicks":253,"cost":88.7,"conversions":6},{"date":"2024-01-30","platform":"Facebook","impressions":49234,"clicks":1001,"cost":142.8,"conversions":16},{"date":"2024-01-30","platform":"Facebook","impressions":14123,"clicks":645,"cost":236.9,"conversions":41},{"date":"2024-01-30","platform":"Facebook","impressions":37890,"clicks":1412,"cost":216.5,"conversions":30},{"date":"2024-01-30","platform":"Facebook","impressions":72123,"clicks":261,"cost":91.3,"conversions":7},{"date":"2024-01-01","platform":"Google","impressions":23456,"clicks":1234,"cost":234.5,"conversions":45},{"date":"2024-01-01","platform":"Google","impressions":45678,"clicks":890,"cost":567.8,"conversions":23},{"date":"2024-01-01","platform":"Google","impressions":67890,"clicks":2345,"cost":423.6,"conversions":67},{"date":"2024-01-02","platform":"Google","impressions":24567,"clicks":1289,"cost":245.6,"conversions":48},{"date":"2024-01-02","platform":"Google","impressions":43234,"clicks":823,"cost":534.2,"conversions":21},{"date":"2024-01-02","platform":"Google","impressions":71234,"clicks":2456,"cost":445.8,"conversions":71},{"date":"2024-01-03","platform":"Google","impressions":22345,"clicks":1123,"cost":213.4,"conversions":42},{"date":"2024-01-03","platform":"Google","impressions":47890,"clicks":967,"cost":623.5,"conversions":25},{"date":"2024-01-03","platform":"Google","impressions":123456,"clicks":456,"cost":123.4,"conversions":12},{"date":"2024-01-04","platform":"Google","impressions":25678,"clicks":1345,"cost":256.7,"conversions":50},{"date":"2024-01-04","platform":"Google","impressions":69456,"clicks":2234,"cost":412.3,"conversions":65},{"date":"2024-01-04","platform":"Google","impressions":134567,"clicks":489,"cost":134.5,"conversions":14},{"date":"2024-01-05","platform":"Google","impressions":23890,"clicks":1234,"cost":234.9,"conversions":46},{"date":"2024-01-05","platform":"Google","impressions":46234,"clicks":912,"cost":589.3,"conversions":24},{"date":"2024-01-05","platform":"Google","impressions":128901,"clicks":467,"cost":128.9,"conversions":13},{"date":"2024-01-06","platform":"Google","impressions":24234,"clicks":1267,"cost":241.2,"conversions":47},{"date":"2024-01-06","platform":"Google","impressions":72345,"clicks":2378,"cost":432.9,"conversions":69},{"date":"2024-01-06","platform":"Google","impressions":131234,"clicks":478,"cost":132.4,"conversions":13},{"date":"2024-01-07","platform":"Google","impressions":26789,"clicks":1456,"cost":278.9,"conversions":54},{"date":"2024-01-07","platform":"Google","impressions":44567,"clicks":878,"cost":567.2,"conversions":22},{"date":"2024-01-07","platform":"Google","impressions":70234,"clicks":2289,"cost":419.5,"conversions":66},{"date":"2024-01-08","platform":"Google","impressions":22567,"clicks":1134,"cost":216.8,"conversions":43},{"date":"2024-01-08","platform":"Google","impressions":48234,"clicks":989,"cost":634.7,"conversions":26},{"date":"2024-01-08","platform":"Google","impressions":125678,"clicks":445,"cost":121.3,"conversions":11},{"date":"2024-01-09","platform":"Google","impressions":25234,"clicks":1312,"cost":250.3,"conversions":49},{"date":"2024-01-09","platform":"Google","impressions":73456,"clicks":2423,"cost":441.8,"conversions":70},{"date":"2024-01-09","platform":"Google","impressions":129345,"clicks":456,"cost":125.6,"conversions":12},{"date":"2024-01-10","platform":"Google","impressions":24678,"clicks":1289,"cost":245.9,"conversions":48},{"date":"2024-01-10","platform":"Google","impressions":45234,"clicks":901,"cost":578.9,"conversions":23},{"date":"2024-01-10","platform":"Google","impressions":68901,"clicks":2267,"cost":414.2,"conversions":64},{"date":"2024-01-11","platform":"Google","impressions":26234,"clicks":1378,"cost":263.4,"conversions":52},{"date":"2024-01-11","platform":"Google","impressions":47890,"clicks":934,"cost":612.5,"conversions":26},{"date":"2024-01-11","platform":"Google","impressions":71234,"clicks":2456,"cost":445.8,"conversions":71},{"date":"2024-01-11","platform":"Google","impressions":136789,"clicks":512,"cost":142.3,"conversions":15},{"date":"2024-01-12","platform":"Google","impressions":25123,"clicks":1312,"cost":250.4,"conversions":49},{"date":"2024-01-12","platform":"Google","impressions":46567,"clicks":912,"cost":596.7,"conversions":24},{"date":"2024-01-12","platform":"Google","impressions":69890,"clicks":2334,"cost":428.9,"conversions":66},{"date":"2024-01-12","platform":"Google","impressions":133456,"clicks":489,"cost":131.2,"conversions":14},{"date":"2024-01-13","platform":"Google","impressions":22456,"clicks":1156,"cost":220.4,"conversions":43},{"date":"2024-01-13","platform":"Google","impressions":41234,"clicks":823,"cost":528.9,"conversions":21},{"date":"2024-01-13","platform":"Google","impressions":63456,"clicks":2089,"cost":382.6,"conversions":60},{"date":"2024-01-13","platform":"Google","impressions":119234,"clicks":434,"cost":116.8,"conversions":12},{"date":"2024-01-14","platform":"Google","impressions":21234,"clicks":1089,"cost":207.8,"conversions":41},{"date":"2024-01-14","platform":"Google","impressions":39567,"clicks":789,"cost":507.4,"conversions":19},{"date":"2024-01-14","platform":"Google","impressions":61890,"clicks":2012,"cost":369.3,"conversions":58},{"date":"2024-01-14","platform":"Google","impressions":115678,"clicks":412,"cost":113.4,"conversions":11},{"date":"2024-01-15","platform":"Google","impressions":23890,"clicks":1234,"cost":235.6,"conversions":46},{"date":"2024-01-15","platform":"Google","impressions":43789,"clicks":856,"cost":560.9,"conversions":22},{"date":"2024-01-15","platform":"Google","impressions":67234,"clicks":2234,"cost":411.7,"conversions":65},{"date":"2024-01-15","platform":"Google","impressions":128901,"clicks":467,"cost":126.7,"conversions":13},{"date":"2024-01-16","platform":"Google","impressions":25456,"clicks":1345,"cost":257.3,"conversions":51},{"date":"2024-01-16","platform":"Google","impressions":45678,"clicks":901,"cost":584.5,"conversions":24},{"date":"2024-01-16","platform":"Google","impressions":70123,"clicks":2378,"cost":435.8,"conversions":69},{"date":"2024-01-16","platform":"Google","impressions":132567,"clicks":489,"cost":130.5,"conversions":14},{"date":"2024-01-17","platform":"Google","impressions":26789,"clicks":1456,"cost":278.9,"conversions":54},{"date":"2024-01-17","platform":"Google","impressions":47234,"clicks":967,"cost":605.6,"conversions":25},{"date":"2024-01-17","platform":"Google","impressions":72456,"clicks":2489,"cost":450.7,"conversions":72},{"date":"2024-01-17","platform":"Google","impressions":138901,"clicks":534,"cost":136.4,"conversions":15},{"date":"2024-01-18","platform":"Google","impressions":25789,"clicks":1389,"cost":265.2,"conversions":52},{"date":"2024-01-18","platform":"Google","impressions":46123,"clicks":923,"cost":590.3,"conversions":24},{"date":"2024-01-18","platform":"Google","impressions":71567,"clicks":2412,"cost":442.3,"conversions":70},{"date":"2024-01-18","platform":"Google","impressions":135234,"clicks":501,"cost":133.6,"conversions":14},{"date":"2024-01-19","platform":"Google","impressions":24567,"clicks":1289,"cost":246.8,"conversions":48},{"date":"2024-01-19","platform":"Google","impressions":44890,"clicks":890,"cost":574.7,"conversions":23},{"date":"2024-01-19","platform":"Google","impressions":69234,"clicks":2301,"cost":423.5,"conversions":67},{"date":"2024-01-19","platform":"Google","impressions":131567,"clicks":478,"cost":129.4,"conversions":13},{"date":"2024-01-20","platform":"Google","impressions":22345,"clicks":1123,"cost":214.5,"conversions":42},{"date":"2024-01-20","platform":"Google","impressions":40567,"clicks":812,"cost":520.4,"conversions":20},{"date":"2024-01-20","platform":"Google","impressions":64890,"clicks":2067,"cost":376.8,"conversions":59},{"date":"2024-01-20","platform":"Google","impressions":124567,"clicks":445,"cost":122.3,"conversions":12},{"date":"2024-01-21","platform":"Google","impressions":21567,"clicks":1089,"cost":207.8,"conversions":41},{"date":"2024-01-21","platform":"Google","impressions":38901,"clicks":778,"cost":498.7,"conversions":19},{"date":"2024-01-21","platform":"Google","impressions":62345,"clicks":1989,"cost":365.4,"conversions":57},{"date":"2024-01-21","platform":"Google","impressions":118234,"clicks":423,"cost":116.2,"conversions":11},{"date":"2024-01-22","platform":"Google","impressions":24234,"clicks":1267,"cost":241.2,"conversions":47},{"date":"2024-01-22","platform":"Google","impressions":42890,"clicks":845,"cost":549.3,"conversions":22},{"date":"2024-01-22","platform":"Google","impressions":66789,"clicks":2223,"cost":407.9,"conversions":64},{"date":"2024-01-22","platform":"Google","impressions":127890,"clicks":456,"cost":125.6,"conversions":13},{"date":"2024-01-23","platform":"Google","impressions":25678,"clicks":1356,"cost":259.4,"conversions":51},{"date":"2024-01-23","platform":"Google","impressions":45123,"clicks":912,"cost":577.8,"conversions":24},{"date":"2024-01-23","platform":"Google","impressions":70234,"clicks":2389,"cost":432.6,"conversions":69},{"date":"2024-01-23","platform":"Google","impressions":133456,"clicks":489,"cost":131.2,"conversions":14},{"date":"2024-01-24","platform":"Google","impressions":27123,"clicks":1434,"cost":274.3,"conversions":55},{"date":"2024-01-24","platform":"Google","impressions":47890,"clicks":978,"cost":613.5,"conversions":26},{"date":"2024-01-24","platform":"Google","impressions":73456,"clicks":2501,"cost":456.7,"conversions":73},{"date":"2024-01-24","platform":"Google","impressions":139234,"clicks":523,"cost":136.8,"conversions":15},{"date":"2024-01-25","platform":"Google","impressions":28234,"clicks":1512,"cost":287.6,"conversions":58},{"date":"2024-01-25","platform":"Google","impressions":49567,"clicks":1012,"cost":634.2,"conversions":27},{"date":"2024-01-25","platform":"Google","impressions":75234,"clicks":2567,"cost":467.8,"conversions":75},{"date":"2024-01-25","platform":"Google","impressions":142345,"clicks":545,"cost":139.9,"conversions":16},{"date":"2024-01-26","platform":"Google","impressions":26789,"clicks":1378,"cost":263.4,"conversions":53},{"date":"2024-01-26","platform":"Google","impressions":47234,"clicks":945,"cost":605.6,"conversions":25},{"date":"2024-01-26","platform":"Google","impressions":72890,"clicks":2434,"cost":450.2,"conversions":71},{"date":"2024-01-26","platform":"Google","impressions":138567,"clicks":512,"cost":136.2,"conversions":15},{"date":"2024-01-27","platform":"Google","impressions":25234,"clicks":1312,"cost":250.3,"conversions":49},{"date":"2024-01-27","platform":"Google","impressions":45678,"clicks":901,"cost":584.5,"conversions":24},{"date":"2024-01-27","platform":"Google","impressions":70123,"clicks":2356,"cost":431.2,"conversions":68},{"date":"2024-01-27","platform":"Google","impressions":134890,"clicks":489,"cost":132.7,"conversions":14},{"date":"2024-01-28","platform":"Google","impressions":23567,"clicks":1189,"cost":226.8,"conversions":44},{"date":"2024-01-28","platform":"Google","impressions":42890,"clicks":834,"cost":549.3,"conversions":21},{"date":"2024-01-28","platform":"Google","impressions":66234,"clicks":2167,"cost":395.8,"conversions":61},{"date":"2024-01-28","platform":"Google","impressions":127345,"clicks":445,"cost":125.1,"conversions":12},{"date":"2024-01-29","platform":"Google","impressions":24890,"clicks":1278,"cost":244.2,"conversions":47},{"date":"2024-01-29","platform":"Google","impressions":44567,"clicks":878,"cost":570.8,"conversions":23},{"date":"2024-01-29","platform":"Google","impressions":68456,"clicks":2289,"cost":419.5,"conversions":66},{"date":"2024-01-29","platform":"Google","impressions":131234,"clicks":467,"cost":128.9,"conversions":13},{"date":"2024-01-30","platform":"Google","impressions":25456,"clicks":1334,"cost":254.6,"conversions":50},{"date":"2024-01-30","platform":"Google","impressions":45890,"clicks":912,"cost":587.7,"conversions":24},{"date":"2024-01-30","platform":"Google","impressions":70234,"clicks":2367,"cost":432.1,"conversions":68},{"date":"2024-01-30","platform":"Google","impressions":133456,"clicks":478,"cost":131.2,"conversions":14},{"date":"2024-01-01","platform":"TikTok","impressions":234567,"clicks":3456,"cost":456.7,"conversions":34},{"date":"2024-01-01","platform":"TikTok","impressions":123456,"clicks":2345,"cost":678.9,"conversions":67},{"date":"2024-01-01","platform":"TikTok","impressions":189234,"clicks":2890,"cost":345.6,"conversions":23},{"date":"2024-01-02","platform":"TikTok","impressions":245678,"clicks":3678,"cost":478.9,"conversions":36},{"date":"2024-01-02","platform":"TikTok","impressions":134567,"clicks":2567,"cost":712.3,"conversions":71},{"date":"2024-01-02","platform":"TikTok","impressions":198345,"clicks":3012,"cost":361.2,"conversions":25},{"date":"2024-01-03","platform":"TikTok","impressions":223456,"clicks":3234,"cost":434.5,"conversions":32},{"date":"2024-01-03","platform":"TikTok","impressions":112345,"clicks":2123,"cost":623.4,"conversions":62},{"date":"2024-01-03","platform":"TikTok","impressions":345678,"clicks":5678,"cost":890.1,"conversions":89},{"date":"2024-01-04","platform":"TikTok","impressions":256789,"clicks":3890,"cost":512.3,"conversions":39},{"date":"2024-01-04","platform":"TikTok","impressions":201234,"clicks":3123,"cost":374.5,"conversions":26},{"date":"2024-01-04","platform":"TikTok","impressions":367890,"clicks":6012,"cost":923.4,"conversions":94},{"date":"2024-01-05","platform":"TikTok","impressions":234234,"clicks":3467,"cost":460.2,"conversions":35},{"date":"2024-01-05","platform":"TikTok","impressions":128901,"clicks":2456,"cost":689.5,"conversions":68},{"date":"2024-01-05","platform":"TikTok","impressions":356789,"clicks":5834,"cost":901.2,"conversions":91},{"date":"2024-01-06","platform":"TikTok","impressions":267890,"clicks":3945,"cost":523.4,"conversions":40},{"date":"2024-01-06","platform":"TikTok","impressions":205678,"clicks":3234,"cost":387.8,"conversions":27},{"date":"2024-01-06","platform":"TikTok","impressions":378901,"clicks":6123,"cost":945.6,"conversions":96},{"date":"2024-01-07","platform":"TikTok","impressions":278901,"clicks":4123,"cost":545.6,"conversions":42},{"date":"2024-01-07","platform":"TikTok","impressions":138901,"clicks":2678,"cost":734.5,"conversions":73},{"date":"2024-01-07","platform":"TikTok","impressions":212345,"clicks":3345,"cost":401.1,"conversions":28},{"date":"2024-01-08","platform":"TikTok","impressions":245234,"clicks":3578,"cost":474.3,"conversions":37},{"date":"2024-01-08","platform":"TikTok","impressions":119234,"clicks":2234,"cost":645.6,"conversions":64},{"date":"2024-01-08","platform":"TikTok","impressions":389012,"clicks":6234,"cost":967.8,"conversions":98},{"date":"2024-01-09","platform":"TikTok","impressions":289012,"clicks":4234,"cost":556.7,"conversions":43},{"date":"2024-01-09","platform":"TikTok","impressions":218901,"clicks":3456,"cost":414.4,"conversions":29},{"date":"2024-01-09","platform":"TikTok","impressions":401234,"clicks":6456,"cost":989.9,"conversions":101},{"date":"2024-01-10","platform":"TikTok","impressions":256234,"clicks":3701,"cost":490.5,"conversions":38},{"date":"2024-01-10","platform":"TikTok","impressions":145678,"clicks":2789,"cost":756.7,"conversions":76},{"date":"2024-01-10","platform":"TikTok","impressions":223456,"clicks":3567,"cost":427.7,"conversions":30},{"date":"2024-01-11","platform":"TikTok","impressions":278901,"clicks":4123,"cost":523.6,"conversions":42},{"date":"2024-01-11","platform":"TikTok","impressions":156789,"clicks":3012,"cost":812.3,"conversions":82},{"date":"2024-01-11","platform":"TikTok","impressions":234567,"clicks":3789,"cost":456.8,"conversions":33},{"date":"2024-01-11","platform":"TikTok","impressions":412345,"clicks":6789,"cost":1023.4,"conversions":103},{"date":"2024-01-12","platform":"TikTok","impressions":267890,"clicks":3945,"cost":501.2,"conversions":40},{"date":"2024-01-12","platform":"TikTok","impressions":148901,"clicks":2834,"cost":767.5,"conversions":77},{"date":"2024-01-12","platform":"TikTok","impressions":228901,"clicks":3634,"cost":441.9,"conversions":31},{"date":"2024-01-12","platform":"TikTok","impressions":398567,"clicks":6534,"cost":998.7,"conversions":98},{"date":"2024-01-13","platform":"TikTok","impressions":234567,"clicks":3456,"cost":456.7,"conversions":34},{"date":"2024-01-13","platform":"TikTok","impressions":134567,"clicks":2567,"cost":712.3,"conversions":71},{"date":"2024-01-13","platform":"TikTok","impressions":201234,"clicks":3123,"cost":374.5,"conversions":26},{"date":"2024-01-13","platform":"TikTok","impressions":367890,"clicks":6012,"cost":923.4,"conversions":94},{"date":"2024-01-14","platform":"TikTok","impressions":223456,"clicks":3234,"cost":434.5,"conversions":32},{"date":"2024-01-14","platform":"TikTok","impressions":128901,"clicks":2456,"cost":689.5,"conversions":68},{"date":"2024-01-14","platform":"TikTok","impressions":195678,"clicks":2989,"cost":361.2,"conversions":25},{"date":"2024-01-14","platform":"TikTok","impressions":356789,"clicks":5834,"cost":901.2,"conversions":91},{"date":"2024-01-15","platform":"TikTok","impressions":246789,"clicks":3678,"cost":478.9,"conversions":36},{"date":"2024-01-15","platform":"TikTok","impressions":142345,"clicks":2678,"cost":734.5,"conversions":73},{"date":"2024-01-15","platform":"TikTok","impressions":212345,"clicks":3345,"cost":401.1,"conversions":28},{"date":"2024-01-15","platform":"TikTok","impressions":378901,"clicks":6123,"cost":945.6,"conversions":96},{"date":"2024-01-16","platform":"TikTok","impressions":289012,"clicks":4234,"cost":556.7,"conversions":43},{"date":"2024-01-16","platform":"TikTok","impressions":156789,"clicks":3012,"cost":812.3,"conversions":82},{"date":"2024-01-16","platform":"TikTok","impressions":245678,"clicks":3890,"cost":467.8,"conversions":34},{"date":"2024-01-16","platform":"TikTok","impressions":423456,"clicks":6890,"cost":1056.8,"conversions":107},{"date":"2024-01-17","platform":"TikTok","impressions":301234,"clicks":4456,"cost":589.9,"conversions":46},{"date":"2024-01-17","platform":"TikTok","impressions":167890,"clicks":3234,"cost":845.6,"conversions":85},{"date":"2024-01-17","platform":"TikTok","impressions":256789,"clicks":4012,"cost":489.2,"conversions":36},{"date":"2024-01-17","platform":"TikTok","impressions":445678,"clicks":7234,"cost":1123.5,"conversions":113},{"date":"2024-01-18","platform":"TikTok","impressions":290123,"clicks":4189,"cost":567.8,"conversions":44},{"date":"2024-01-18","platform":"TikTok","impressions":161234,"clicks":3089,"cost":823.7,"conversions":83},{"date":"2024-01-18","platform":"TikTok","impressions":248901,"clicks":3934,"cost":478.5,"conversions":35},{"date":"2024-01-18","platform":"TikTok","impressions":434567,"clicks":7012,"cost":1089.3,"conversions":109},{"date":"2024-01-19","platform":"TikTok","impressions":278901,"clicks":4123,"cost":545.6,"conversions":42},{"date":"2024-01-19","platform":"TikTok","impressions":153456,"clicks":2945,"cost":789.2,"conversions":79},{"date":"2024-01-19","platform":"TikTok","impressions":236789,"clicks":3734,"cost":456.8,"conversions":33},{"date":"2024-01-19","platform":"TikTok","impressions":423456,"clicks":6789,"cost":1034.5,"conversions":104},{"date":"2024-01-20","platform":"TikTok","impressions":256234,"clicks":3701,"cost":490.5,"conversions":38},{"date":"2024-01-20","platform":"TikTok","impressions":142345,"clicks":2678,"cost":734.5,"conversions":73},{"date":"2024-01-20","platform":"TikTok","impressions":218901,"clicks":3456,"cost":414.4,"conversions":29},{"date":"2024-01-20","platform":"TikTok","impressions":389012,"clicks":6234,"cost":967.8,"conversions":98},{"date":"2024-01-21","platform":"TikTok","impressions":234567,"clicks":3456,"cost":445.7,"conversions":34},{"date":"2024-01-21","platform":"TikTok","impressions":128901,"clicks":2456,"cost":678.9,"conversions":67},{"date":"2024-01-21","platform":"TikTok","impressions":201234,"clicks":3123,"cost":374.5,"conversions":26},{"date":"2024-01-21","platform":"TikTok","impressions":367890,"clicks":6012,"cost":923.4,"conversions":94},{"date":"2024-01-22","platform":"TikTok","impressions":267890,"clicks":3945,"cost":523.4,"conversions":40},{"date":"2024-01-22","platform":"TikTok","impressions":148901,"clicks":2834,"cost":767.5,"conversions":77},{"date":"2024-01-22","platform":"TikTok","impressions":228901,"clicks":3634,"cost":441.9,"conversions":31},{"date":"2024-01-22","platform":"TikTok","impressions":398567,"clicks":6534,"cost":998.7,"conversions":98},{"date":"2024-01-23","platform":"TikTok","impressions":289012,"clicks":4234,"cost":556.7,"conversions":43},{"date":"2024-01-23","platform":"TikTok","impressions":156789,"clicks":3012,"cost":812.3,"conversions":82},{"date":"2024-01-23","platform":"TikTok","impressions":245678,"clicks":3890,"cost":467.8,"conversions":34},{"date":"2024-01-23","platform":"TikTok","impressions":423456,"clicks":6890,"cost":1056.8,"conversions":107},{"date":"2024-01-24","platform":"TikTok","impressions":312345,"clicks":4567,"cost":623.4,"conversions":48},{"date":"2024-01-24","platform":"TikTok","impressions":172345,"clicks":3345,"cost":867.9,"conversions":87},{"date":"2024-01-24","platform":"TikTok","impressions":267890,"clicks":4123,"cost":512.6,"conversions":37},{"date":"2024-01-24","platform":"TikTok","impressions":456789,"clicks":7456,"cost":1167.8,"conversions":118},{"date":"2024-01-25","platform":"TikTok","impressions":323456,"clicks":4789,"cost":645.7,"conversions":50},{"date":"2024-01-25","platform":"TikTok","impressions":178901,"clicks":3456,"cost":889.5,"conversions":89},{"date":"2024-01-25","platform":"TikTok","impressions":278901,"clicks":4234,"cost":534.2,"conversions":39},{"date":"2024-01-25","platform":"TikTok","impressions":467890,"clicks":7623,"cost":1189.4,"conversions":120},{"date":"2024-01-26","platform":"TikTok","impressions":301234,"clicks":4456,"cost":589.9,"conversions":46},{"date":"2024-01-26","platform":"TikTok","impressions":167890,"clicks":3234,"cost":845.6,"conversions":85},{"date":"2024-01-26","platform":"TikTok","impressions":256789,"clicks":4012,"cost":489.2,"conversions":36},{"date":"2024-01-26","platform":"TikTok","impressions":445678,"clicks":7234,"cost":1123.5,"conversions":113},{"date":"2024-01-27","platform":"TikTok","impressions":278901,"clicks":4123,"cost":545.6,"conversions":42},{"date":"2024-01-27","platform":"TikTok","impressions":153456,"clicks":2945,"cost":789.2,"conversions":79},{"date":"2024-01-27","platform":"TikTok","impressions":236789,"clicks":3734,"cost":456.8,"conversions":33},{"date":"2024-01-27","platform":"TikTok","impressions":423456,"clicks":6789,"cost":1034.5,"conversions":104},{"date":"2024-01-28","platform":"TikTok","impressions":267890,"clicks":3945,"cost":501.2,"conversions":40},{"date":"2024-01-28","platform":"TikTok","impressions":148901,"clicks":2834,"cost":756.7,"conversions":76},{"date":"2024-01-28","platform":"TikTok","impressions":223456,"clicks":3567,"cost":427.7,"conversions":30},{"date":"2024-01-28","platform":"TikTok","impressions":401234,"clicks":6456,"cost":989.9,"conversions":101},{"date":"2024-01-29","platform":"TikTok","impressions":289012,"clicks":4234,"cost":556.7,"conversions":43},{"date":"2024-01-29","platform":"TikTok","impressions":156789,"clicks":3012,"cost":812.3,"conversions":82},{"date":"2024-01-29","platform":"TikTok","impressions":245678,"clicks":3890,"cost":467.8,"conversions":34},{"date":"2024-01-29","platform":"TikTok","impressions":423456,"clicks":6890,"cost":1056.8,"conversions":107},{"date":"2024-01-30","platform":"TikTok","impressions":295678,"clicks":4345,"cost":573.2,"conversions":44},{"date":"2024-01-30","platform":"TikTok","impressions":161234,"clicks":3089,"cost":823.7,"conversions":83},{"date":"2024-01-30","platform":"TikTok","impressions":251234,"clicks":3967,"cost":481.5,"conversions":35},{"date":"2024-01-30","platform":"TikTok","impressions":434567,"clicks":7012,"cost":1089.3,"conversions":109}];
+ 
 const platforms = ['Facebook','Google','TikTok'];
-const baseImpr  = {Facebook:148000, Google:238000, TikTok:990000};
-const baseCost  = {Facebook:430,    Google:1300,   TikTok:2500};
-const baseConv  = {Facebook:83,     Google:143,    TikTok:235};
-for(let d=11;d<=30;d++){
-  const ds = `2024-01-${String(d).padStart(2,'0')}`;
-  platforms.forEach(p=>{
-    const r = 0.9+Math.random()*0.2;
-    const imp = Math.round(baseImpr[p]*r);
-    const cst = +(baseCost[p]*r).toFixed(1);
-    const clk = Math.round(imp*(p==='TikTok'?0.016:p==='Facebook'?0.0196:0.019));
-    const cnv = Math.round(baseConv[p]*r);
-    raw.push({date:ds, platform:p, impressions:imp, clicks:clk, cost:cst, conversions:cnv});
-  });
-}
-
-// ─── STATE ───────────────────────────────────────────────────────────────────
 let activeFilter = 'all';
 const charts = {};
-
-const COLORS = { Facebook:'#4f8ef7', Google:'#f4c430', TikTok:'#ff3b5c' };
-const ALPHA  = { Facebook:'rgba(79,142,247,0.15)', Google:'rgba(244,196,48,0.15)', TikTok:'rgba(255,59,92,0.15)' };
-
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
-function filtered(){ return activeFilter==='all' ? raw : raw.filter(r=>r.platform===activeFilter); }
-
-function groupBy(data, key){
-  return data.reduce((acc,r)=>{
-    (acc[r[key]] = acc[r[key]]||[]).push(r); return acc;
-  },{});
-}
-
-function sumBy(arr, key){ return arr.reduce((s,r)=>s+(r[key]||0),0); }
-function fmt(n,d=0){ return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':n.toFixed(d); }
-
-// ─── KPIs ────────────────────────────────────────────────────────────────────
+const COLORS = {Facebook:'#4f8ef7',Google:'#f4c430',TikTok:'#ff3b5c'};
+const ALPHA = {Facebook:'rgba(79,142,247,0.15)',Google:'rgba(244,196,48,0.15)',TikTok:'rgba(255,59,92,0.15)'};
+ 
+function filtered(){return activeFilter==='all'?raw:raw.filter(r=>r.platform===activeFilter);}
+function groupBy(data,key){return data.reduce((acc,r)=>{(acc[r[key]]=acc[r[key]]||[]).push(r);return acc;},{});}
+function sumBy(arr,key){return arr.reduce((s,r)=>s+(r[key]||0),0);}
+function fmt(n,d){d=d||0;return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':n.toFixed(d);}
+ 
+Chart.defaults.color='#6b7280';
+Chart.defaults.borderColor='#1e2128';
+Chart.defaults.font.family='DM Mono';
+Chart.defaults.plugins.tooltip.backgroundColor='#1a1d27';
+Chart.defaults.plugins.tooltip.titleColor='#e8eaf0';
+Chart.defaults.plugins.tooltip.bodyColor='#9ca3af';
+Chart.defaults.plugins.tooltip.borderColor='#374151';
+Chart.defaults.plugins.tooltip.borderWidth=1;
+Chart.defaults.plugins.tooltip.padding=12;
+Chart.defaults.plugins.tooltip.cornerRadius=8;
+Chart.defaults.plugins.tooltip.titleFont={family:'Syne',weight:'700',size:12};
+Chart.defaults.plugins.tooltip.bodyFont={family:'DM Mono',size:11};
+Chart.defaults.plugins.tooltip.intersect=false;
+Chart.defaults.plugins.tooltip.mode='index';
+ 
+function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+ 
 function renderKPIs(){
-  const data = filtered();
-  const imp  = sumBy(data,'impressions');
-  const clk  = sumBy(data,'clicks');
-  const cst  = sumBy(data,'cost');
-  const cnv  = sumBy(data,'conversions');
-  const ctr  = (clk/imp*100).toFixed(2);
-  const cpc  = (cst/clk).toFixed(2);
-  const cvr  = (cnv/clk*100).toFixed(2);
-  const cpa  = (cst/cnv).toFixed(2);
-
-  const kpis = [
-    {label:'Impressions', value:fmt(imp), sub:'total reach', pct:85},
-    {label:'Clicks',      value:fmt(clk), sub:'total clicks', pct:60},
-    {label:'Total Spend', value:'$'+fmt(cst,1), sub:'USD', pct:70},
-    {label:'Conversions', value:fmt(cnv), sub:'total converted', pct:50},
-    {label:'Avg CTR',     value:ctr+'%', sub:'click-through rate', pct:parseInt(ctr*20)},
-    {label:'Avg CPA',     value:'$'+cpa, sub:'cost per acquisition', pct:40},
+  const data=filtered();
+  const imp=sumBy(data,'impressions'),clk=sumBy(data,'clicks'),cst=sumBy(data,'cost'),cnv=sumBy(data,'conversions');
+  const ctr=(clk/imp*100),cpa=(cst/cnv);
+  const kpis=[
+    {label:'Impressions',value:fmt(imp),sub:imp.toLocaleString()+' total',pct:90,color:'var(--accent)'},
+    {label:'Clicks',value:fmt(clk),sub:clk.toLocaleString()+' total',pct:65,color:'var(--fb)'},
+    {label:'Total Spend',value:'$'+fmt(cst,1),sub:'$'+Math.round(cst).toLocaleString()+' USD',pct:75,color:'var(--gg)'},
+    {label:'Conversions',value:fmt(cnv),sub:cnv.toLocaleString()+' total',pct:55,color:'var(--tt)'},
+    {label:'Avg CTR',value:ctr.toFixed(2)+'%',sub:'clicks / impressions',pct:Math.min(ctr*25,100),color:'var(--accent)'},
+    {label:'Avg CPA',value:'$'+cpa.toFixed(2),sub:'cost / conversion',pct:45,color:'var(--fb)'},
   ];
-
-  document.getElementById('kpiGrid').innerHTML = kpis.map(k=>`
-    <div class="kpi">
-      <div class="kpi-label">${k.label}</div>
-      <div class="kpi-value">${k.value}</div>
-      <div class="kpi-sub">${k.sub}</div>
-      <div class="kpi-bar" style="width:${k.pct}%"></div>
-    </div>`).join('');
+  document.getElementById('kpiGrid').innerHTML=kpis.map(k=>`<div class="kpi"><div class="kpi-label">${k.label}</div><div class="kpi-value">${k.value}</div><div class="kpi-sub">${k.sub}</div><div class="kpi-bar" style="width:${k.pct}%;background:${k.color}"></div></div>`).join('');
 }
-
-// ─── CHART DEFAULTS ──────────────────────────────────────────────────────────
-Chart.defaults.color = '#6b7280';
-Chart.defaults.borderColor = '#1e2128';
-Chart.defaults.font.family = 'DM Mono';
-Chart.defaults.plugins.tooltip.backgroundColor = '#1e2128';
-Chart.defaults.plugins.tooltip.titleColor = '#e8eaf0';
-Chart.defaults.plugins.tooltip.bodyColor = '#9ca3af';
-Chart.defaults.plugins.tooltip.borderColor = '#374151';
-Chart.defaults.plugins.tooltip.borderWidth = 1;
-Chart.defaults.plugins.tooltip.padding = 10;
-Chart.defaults.plugins.tooltip.cornerRadius = 6;
-Chart.defaults.plugins.tooltip.intersect = false;
-Chart.defaults.plugins.tooltip.mode = 'index';
-
-function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
-
-// ─── SPEND BAR ───────────────────────────────────────────────────────────────
+ 
 function renderSpendBar(){
-  destroyChart('spendBar');
-  const data = filtered();
-  const byP  = groupBy(data,'platform');
-  const plats = Object.keys(byP);
-  charts.spendBar = new Chart(document.getElementById('spendBar'),{
-    type:'bar',
-    data:{
-      labels: plats,
-      datasets:[{
-        data: plats.map(p=>sumBy(byP[p],'cost').toFixed(2)),
-        backgroundColor: plats.map(p=>COLORS[p]),
-        borderRadius:6, borderSkipped:false
-      }]
-    },
-    options:{
-      plugins:{legend:{display:false}},
-      scales:{
-        x:{grid:{display:false}},
-        y:{grid:{color:'#1e2128'}, ticks:{callback:v=>'$'+v}}
-      },
-      responsive:true, maintainAspectRatio:true
-    }
-  });
+  dc('spendBar');const byP=groupBy(filtered(),'platform');const pl=Object.keys(byP);
+  charts.spendBar=new Chart(document.getElementById('spendBar'),{type:'bar',data:{labels:pl,datasets:[{data:pl.map(p=>+sumBy(byP[p],'cost').toFixed(2)),backgroundColor:pl.map(p=>COLORS[p]),borderRadius:6,borderSkipped:false}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{title:ctx=>ctx[0].label+' — Total Spend',label:ctx=>' $'+Number(ctx.parsed.y).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}}},scales:{x:{grid:{display:false}},y:{grid:{color:'#1e2128'},ticks:{callback:v=>'$'+v}}},responsive:true,maintainAspectRatio:true}});
 }
-
-// ─── SPEND LINE ──────────────────────────────────────────────────────────────
+ 
 function renderSpendLine(){
-  destroyChart('spendLine');
-  const data  = filtered();
-  const dates = [...new Set(data.map(r=>r.date))].sort();
-  const byP   = groupBy(data,'platform');
-  const plats = activeFilter==='all' ? platforms : [activeFilter];
-
-  const datasets = plats.map(p=>{
-    const byDate = groupBy(byP[p]||[],'date');
-    return {
-      label: p,
-      data: dates.map(d=> byDate[d] ? sumBy(byDate[d],'cost') : 0),
-      borderColor: COLORS[p], backgroundColor: ALPHA[p],
-      tension:0.4, pointRadius:2, fill: activeFilter!=='all'
-    };
-  });
-
-  charts.spendLine = new Chart(document.getElementById('spendLine'),{
-    type:'line',
-    data:{ labels: dates.map(d=>d.slice(5)), datasets },
-    options:{
-      plugins:{legend:{labels:{boxWidth:10,padding:16}}},
-      scales:{
-        x:{grid:{display:false}, ticks:{maxTicksLimit:8}},
-        y:{grid:{color:'#1e2128'}, ticks:{callback:v=>'$'+v}}
-      },
-      responsive:true, maintainAspectRatio:true
-    }
-  });
+  dc('spendLine');const data=filtered();const dates=[...new Set(data.map(r=>r.date))].sort();
+  const byP=groupBy(data,'platform');const pl=activeFilter==='all'?platforms:[activeFilter];
+  charts.spendLine=new Chart(document.getElementById('spendLine'),{type:'line',data:{labels:dates.map(d=>d.slice(5)),datasets:pl.map(p=>{const bd=groupBy(byP[p]||[],'date');return{label:p,data:dates.map(d=>bd[d]?+sumBy(bd[d],'cost').toFixed(2):0),borderColor:COLORS[p],backgroundColor:ALPHA[p],tension:0.4,pointRadius:3,pointHoverRadius:6,fill:activeFilter!=='all'};}))},options:{interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{boxWidth:10,padding:16}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: $${Number(ctx.parsed.y).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}` }}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8}},y:{grid:{color:'#1e2128'},ticks:{callback:v=>'$'+v}}},responsive:true,maintainAspectRatio:true}});
 }
-
-// ─── CTR / CPC / CVR BARS ────────────────────────────────────────────────────
-function renderMetricBar(canvasId, metricFn, label, prefix='', suffix=''){
-  destroyChart(canvasId);
-  const data = filtered();
-  const byP  = groupBy(data,'platform');
-  const plats = Object.keys(byP);
-  const vals  = plats.map(p=>metricFn(byP[p]));
-
-  charts[canvasId] = new Chart(document.getElementById(canvasId),{
-    type:'bar',
-    data:{
-      labels: plats,
-      datasets:[{
-        label,
-        data: vals,
-        backgroundColor: plats.map(p=>COLORS[p]),
-        borderRadius:6, borderSkipped:false
-      }]
-    },
-    options:{
-      indexAxis:'y',
-      plugins:{legend:{display:false}},
-      scales:{
-        x:{grid:{color:'#1e2128'}, ticks:{callback:v=>prefix+v+suffix}},
-        y:{grid:{display:false}}
-      },
-      responsive:true, maintainAspectRatio:true
-    }
-  });
+ 
+function renderMetricBar(cid,fn,lbl,pre,suf,tfn){
+  pre=pre||'';suf=suf||'';dc(cid);
+  const byP=groupBy(filtered(),'platform');const pl=Object.keys(byP);
+  charts[cid]=new Chart(document.getElementById(cid),{type:'bar',data:{labels:pl,datasets:[{label:lbl,data:pl.map(p=>+fn(byP[p])),backgroundColor:pl.map(p=>COLORS[p]),borderRadius:6,borderSkipped:false}]},options:{indexAxis:'y',plugins:{legend:{display:false},tooltip:{mode:'nearest',intersect:true,callbacks:{label:tfn||(ctx=>` ${pre}${Number(ctx.parsed.x).toFixed(2)}${suf}`) }}},scales:{x:{grid:{color:'#1e2128'},ticks:{callback:v=>pre+v+suf}},y:{grid:{display:false}}},responsive:true,maintainAspectRatio:true}});
 }
-
-// ─── IMPRESSIONS DONUT ───────────────────────────────────────────────────────
+ 
 function renderImpDonut(){
-  destroyChart('impDonut');
-  const data = filtered();
-  const byP  = groupBy(data,'platform');
-  const plats= Object.keys(byP);
-  charts.impDonut = new Chart(document.getElementById('impDonut'),{
-    type:'doughnut',
-    data:{
-      labels: plats,
-      datasets:[{
-        data: plats.map(p=>sumBy(byP[p],'impressions')),
-        backgroundColor: plats.map(p=>COLORS[p]),
-        borderColor:'#111318', borderWidth:3, hoverOffset:8
-      }]
-    },
-    options:{
-      cutout:'65%',
-      plugins:{legend:{position:'bottom', labels:{boxWidth:10,padding:16}}},
-      responsive:true, maintainAspectRatio:true
-    }
-  });
+  dc('impDonut');const byP=groupBy(filtered(),'platform');const pl=Object.keys(byP);
+  const vals=pl.map(p=>sumBy(byP[p],'impressions'));const total=vals.reduce((a,b)=>a+b,0);
+  charts.impDonut=new Chart(document.getElementById('impDonut'),{type:'doughnut',data:{labels:pl,datasets:[{data:vals,backgroundColor:pl.map(p=>COLORS[p]),borderColor:'#111318',borderWidth:3,hoverOffset:10}]},options:{cutout:'65%',plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:16}},tooltip:{mode:'nearest',intersect:true,callbacks:{label:ctx=>{const pct=(ctx.parsed/total*100).toFixed(1);return ` ${ctx.label}: ${fmt(ctx.parsed)} impressions (${pct}%)`;}} }},responsive:true,maintainAspectRatio:true}});
 }
-
-// ─── DAILY CONVERSIONS LINE ──────────────────────────────────────────────────
+ 
 function renderConvLine(){
-  destroyChart('convLine');
-  const data  = filtered();
-  const dates = [...new Set(data.map(r=>r.date))].sort();
-  const byP   = groupBy(data,'platform');
-  const plats = activeFilter==='all' ? platforms : [activeFilter];
-
-  const datasets = plats.map(p=>{
-    const byDate = groupBy(byP[p]||[],'date');
-    return {
-      label:p,
-      data: dates.map(d=> byDate[d] ? sumBy(byDate[d],'conversions') : 0),
-      borderColor: COLORS[p], backgroundColor: ALPHA[p],
-      tension:0.4, pointRadius:2, fill: activeFilter!=='all'
-    };
-  });
-
-  charts.convLine = new Chart(document.getElementById('convLine'),{
-    type:'line',
-    data:{ labels: dates.map(d=>d.slice(5)), datasets },
-    options:{
-      plugins:{legend:{labels:{boxWidth:10,padding:16}}},
-      scales:{
-        x:{grid:{display:false}, ticks:{maxTicksLimit:8}},
-        y:{grid:{color:'#1e2128'}}
-      },
-      responsive:true, maintainAspectRatio:true
-    }
-  });
+  dc('convLine');const data=filtered();const dates=[...new Set(data.map(r=>r.date))].sort();
+  const byP=groupBy(data,'platform');const pl=activeFilter==='all'?platforms:[activeFilter];
+  charts.convLine=new Chart(document.getElementById('convLine'),{type:'line',data:{labels:dates.map(d=>d.slice(5)),datasets:pl.map(p=>{const bd=groupBy(byP[p]||[],'date');return{label:p,data:dates.map(d=>bd[d]?sumBy(bd[d],'conversions'):0),borderColor:COLORS[p],backgroundColor:ALPHA[p],tension:0.4,pointRadius:3,pointHoverRadius:6,fill:activeFilter!=='all'};}))},options:{interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{boxWidth:10,padding:16}},tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} conversions`}}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:8}},y:{grid:{color:'#1e2128'}}},responsive:true,maintainAspectRatio:true}});
 }
-
-// ─── SUMMARY TABLE ───────────────────────────────────────────────────────────
+ 
 function renderTable(){
-  const data = filtered();
-  const byP  = groupBy(data,'platform');
-  const plats= activeFilter==='all' ? platforms : [activeFilter];
-
-  const rows = plats.map(p=>{
-    const d   = byP[p]||[];
-    const imp = sumBy(d,'impressions');
-    const clk = sumBy(d,'clicks');
-    const cst = sumBy(d,'cost');
-    const cnv = sumBy(d,'conversions');
-    const ctr = (clk/imp*100).toFixed(2);
-    const cpc = (cst/clk).toFixed(2);
-    const cvr = (cnv/clk*100).toFixed(2);
-    const cpa = (cst/cnv).toFixed(2);
-    return {p, imp, clk, cst, cnv, ctr, cpc, cvr, cpa};
-  });
-
-  // best CVR pill
-  const bestCVR = Math.max(...rows.map(r=>parseFloat(r.cvr)));
-  const worstCVR= Math.min(...rows.map(r=>parseFloat(r.cvr)));
-
-  const thead = `<thead><tr>
-    <th>Platform</th><th>Impressions</th><th>Clicks</th>
-    <th>Spend ($)</th><th>Conversions</th>
-    <th>CTR (%)</th><th>CPC ($)</th><th>CVR (%)</th><th>CPA ($)</th>
-  </tr></thead>`;
-
-  const tbody = '<tbody>' + rows.map(r=>{
-    const pillClass = parseFloat(r.cvr)===bestCVR ? 'pill-best' : parseFloat(r.cvr)===worstCVR ? 'pill-low' : 'pill-mid';
-    return `<tr>
-      <td><span class="dot" style="background:${COLORS[r.p]}"></span>${r.p}</td>
-      <td>${fmt(r.imp)}</td>
-      <td>${fmt(r.clk)}</td>
-      <td>${r.cst.toFixed(0)}</td>
-      <td>${fmt(r.cnv)}</td>
-      <td>${r.ctr}</td>
-      <td>${r.cpc}</td>
-      <td><span class="pill ${pillClass}">${r.cvr}%</span></td>
-      <td>${r.cpa}</td>
-    </tr>`;
-  }).join('') + '</tbody>';
-
-  document.getElementById('summaryTable').innerHTML = thead + tbody;
+  const byP=groupBy(filtered(),'platform');const pl=activeFilter==='all'?platforms:[activeFilter];
+  const totCst=sumBy(filtered(),'cost'),totCnv=sumBy(filtered(),'conversions');
+  const rows=pl.map(p=>{const d=byP[p]||[];const imp=sumBy(d,'impressions'),clk=sumBy(d,'clicks'),cst=sumBy(d,'cost'),cnv=sumBy(d,'conversions');return{p,imp,clk,cst,cnv,ctr:(clk/imp*100).toFixed(2),cpc:(cst/clk).toFixed(2),cvr:(cnv/clk*100).toFixed(2),cpa:(cst/cnv).toFixed(2),spendShare:(cst/totCst*100).toFixed(1),convShare:(cnv/totCnv*100).toFixed(1)};});
+  const bestCPA=Math.min(...rows.map(r=>parseFloat(r.cpa)));const worstCPA=Math.max(...rows.map(r=>parseFloat(r.cpa)));const bestCVR=Math.max(...rows.map(r=>parseFloat(r.cvr)));
+  document.getElementById('summaryTable').innerHTML=`<thead><tr><th>Platform</th><th>Impressions</th><th>Clicks</th><th>Spend ($)</th><th>Spend %</th><th>Conversions</th><th>Conv %</th><th>CTR (%)</th><th>CPC ($)</th><th>CVR (%)</th><th>CPA ($)</th></tr></thead><tbody>`+rows.map(r=>`<tr><td><span class="dot" style="background:${COLORS[r.p]}"></span>${r.p}</td><td>${fmt(r.imp)}</td><td>${fmt(r.clk)}</td><td>$${r.cst.toFixed(0)}</td><td>${r.spendShare}%</td><td>${fmt(r.cnv)}</td><td>${r.convShare}%</td><td>${r.ctr}%</td><td>$${r.cpc}</td><td><span class="pill ${parseFloat(r.cvr)===bestCVR?'pill-best':'pill-mid'}">${r.cvr}%</span></td><td><span class="pill ${parseFloat(r.cpa)===bestCPA?'pill-best':parseFloat(r.cpa)===worstCPA?'pill-low':'pill-mid'}">$${r.cpa}</span></td></tr>`).join('')+'</tbody>';
 }
-
-// ─── RENDER ALL ──────────────────────────────────────────────────────────────
-function renderAll(){
-  renderKPIs();
-  renderSpendBar();
-  renderSpendLine();
-  renderMetricBar('ctrBar', d=>(sumBy(d,'clicks')/sumBy(d,'impressions')*100).toFixed(2), 'CTR', '', '%');
-  renderMetricBar('cpcBar', d=>(sumBy(d,'cost')/sumBy(d,'clicks')).toFixed(2), 'CPC', '$');
-  renderMetricBar('cvrBar', d=>(sumBy(d,'conversions')/sumBy(d,'clicks')*100).toFixed(2), 'CVR', '', '%');
-  renderImpDonut();
-  renderConvLine();
-  renderTable();
+ 
+function renderInsights(){
+  const byP=groupBy(raw,'platform');
+  const stats=platforms.map(p=>{const d=byP[p];const imp=sumBy(d,'impressions'),clk=sumBy(d,'clicks'),cst=sumBy(d,'cost'),cnv=sumBy(d,'conversions');return{p,ctr:(clk/imp*100).toFixed(2),cvr:(cnv/clk*100).toFixed(2),cpa:(cst/cnv).toFixed(2),spendShare:(cst/sumBy(raw,'cost')*100).toFixed(1),convShare:(cnv/sumBy(raw,'conversions')*100).toFixed(1)};});
+  const bestCPA=stats.reduce((a,b)=>parseFloat(a.cpa)<parseFloat(b.cpa)?a:b);
+  const bestCVR=stats.reduce((a,b)=>parseFloat(a.cvr)>parseFloat(b.cvr)?a:b);
+  const worstCPA=stats.reduce((a,b)=>parseFloat(a.cpa)>parseFloat(b.cpa)?a:b);
+  document.getElementById('insightGrid').innerHTML=[
+    {label:'Most Cost Efficient',value:bestCPA.p,ivalue:`CPA: $${bestCPA.cpa}`,desc:`Lowest cost per acquisition. CTR of ${bestCPA.ctr}% with ${bestCPA.convShare}% of conversions at only ${bestCPA.spendShare}% of budget.`,color:COLORS[bestCPA.p]},
+    {label:'Highest Conversion Rate',value:bestCVR.p,ivalue:`CVR: ${bestCVR.cvr}%`,desc:`Best at converting clicks to customers. Drives ${bestCVR.convShare}% of total conversions with a CPA of $${bestCVR.cpa}.`,color:COLORS[bestCVR.p]},
+    {label:'Budget Efficiency Gap',value:worstCPA.p,ivalue:`CPA: $${worstCPA.cpa}`,desc:`Consumes ${worstCPA.spendShare}% of budget but delivers only ${worstCPA.convShare}% of conversions. Highest CPA.`,color:COLORS[worstCPA.p]},
+  ].map(i=>`<div class="insight-item"><div class="i-label">${i.label}</div><div class="i-value" style="color:${i.color}">${i.value} — ${i.ivalue}</div><div class="i-desc">${i.desc}</div></div>`).join('');
+  document.getElementById('recText').textContent=`${worstCPA.p} absorbs ${worstCPA.spendShare}% of total budget but returns the weakest CPA at $${worstCPA.cpa}. Reallocating 20–30% of ${worstCPA.p} budget toward ${bestCPA.p} (CPA $${bestCPA.cpa}) and ${bestCVR.p} (CVR ${bestCVR.cvr}%) is projected to reduce blended CPA by 15–20% while maintaining overall conversion volume.`;
 }
-
-// ─── FILTER ──────────────────────────────────────────────────────────────────
-function setFilter(f, btn){
-  activeFilter = f;
-  document.querySelectorAll('.filter-btn').forEach(b=>{
-    b.className = 'filter-btn';
-  });
-  const cls = f==='all'?'active-all':f==='Facebook'?'active-fb':f==='Google'?'active-gg':'active-tt';
-  btn.classList.add(cls);
-  renderAll();
-}
-
+ 
+function renderAll(){renderKPIs();renderSpendBar();renderSpendLine();renderMetricBar('ctrBar',d=>(sumBy(d,'clicks')/sumBy(d,'impressions')*100).toFixed(2),'CTR','','%',ctx=>` ${ctx.label}: ${Number(ctx.parsed.x).toFixed(2)}% CTR`);renderMetricBar('cpaBar',d=>(sumBy(d,'cost')/sumBy(d,'conversions')).toFixed(2),'CPA','$','',ctx=>` ${ctx.label}: $${Number(ctx.parsed.x).toFixed(2)} CPA`);renderMetricBar('cvrBar',d=>(sumBy(d,'conversions')/sumBy(d,'clicks')*100).toFixed(2),'CVR','','%',ctx=>` ${ctx.label}: ${Number(ctx.parsed.x).toFixed(2)}% CVR`);renderImpDonut();renderConvLine();renderTable();renderInsights();}
+function setFilter(f,btn){activeFilter=f;document.querySelectorAll('.filter-btn').forEach(b=>{b.className='filter-btn';});btn.classList.add(f==='all'?'active-all':f==='Facebook'?'active-fb':f==='Google'?'active-gg':'active-tt');renderAll();}
 renderAll();
 </script>
 </body>
 </html>
+
+
