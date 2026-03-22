@@ -49,8 +49,10 @@ tbody td{padding:12px 14px;}
 .pill-low{background:rgba(255,59,92,0.15);color:var(--tt);}
 .insight-box{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:12px;padding:24px;margin-top:16px;}
 .insight-box h3{font-family:'Syne',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;}
-.insight-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
-@media(max-width:800px){.insight-grid{grid-template-columns:1fr;}}
+.insight-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;}
+.insight-grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px;}
+@media(max-width:800px){.insight-grid,.insight-grid-2{grid-template-columns:1fr;}}
+.insight-divider{font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin:14px 0 10px 0;padding-bottom:6px;border-bottom:1px solid var(--border);}
 .insight-item{padding:14px;background:rgba(255,255,255,0.02);border-radius:8px;border:1px solid var(--border);}
 .insight-item .i-label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;}
 .insight-item .i-value{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:4px;}
@@ -100,7 +102,12 @@ tbody td{padding:12px 14px;}
 </div>
 <div class="insight-box">
   <h3>Key Insights &amp; Recommendations</h3>
+  <div class="insight-divider">Efficiency &amp; Cost Metrics</div>
   <div class="insight-grid" id="insightGrid"></div>
+  <div class="insight-divider">Channel Role Analysis</div>
+  <div class="insight-grid-2" id="insightGrid2"></div>
+  <div class="insight-divider">Trend &amp; Volume Analysis</div>
+  <div class="insight-grid-2" id="insightGrid3"></div>
   <div class="rec-box">
     <div class="rec-label">Strategic Recommendation</div>
     <div class="rec-text" id="recText"></div>
@@ -232,24 +239,65 @@ function renderTable(){
   document.getElementById('summaryTable').innerHTML=html;
 }
 function renderInsights(){
-  const byP=groupBy(raw,'platform');
-  const stats=platforms.map(function(p){
-    const d=byP[p];
-    const imp=sumBy(d,'impressions'),clk=sumBy(d,'clicks'),cst=sumBy(d,'cost'),cnv=sumBy(d,'conversions');
-    return {p:p,ctr:(clk/imp*100).toFixed(2),cvr:(cnv/clk*100).toFixed(2),cpa:(cst/cnv).toFixed(2),spendShare:(cst/sumBy(raw,'cost')*100).toFixed(1),convShare:(cnv/sumBy(raw,'conversions')*100).toFixed(1)};
+  var byP=groupBy(raw,'platform');
+  var totalImp=sumBy(raw,'impressions'),totalClk=sumBy(raw,'clicks'),totalCst=sumBy(raw,'cost'),totalCnv=sumBy(raw,'conversions');
+  var stats=platforms.map(function(p){
+    var d=byP[p];
+    var imp=sumBy(d,'impressions'),clk=sumBy(d,'clicks'),cst=sumBy(d,'cost'),cnv=sumBy(d,'conversions');
+    return {p:p,imp:imp,clk:clk,cst:cst,cnv:cnv,
+      ctr:(clk/imp*100).toFixed(2),cvr:(cnv/clk*100).toFixed(2),
+      cpa:(cst/cnv).toFixed(2),cpc:(cst/clk).toFixed(2),
+      spendShare:(cst/totalCst*100).toFixed(1),convShare:(cnv/totalCnv*100).toFixed(1),
+      impShare:(imp/totalImp*100).toFixed(1)};
   });
-  const bestCPA=stats.reduce(function(a,b){return parseFloat(a.cpa)<parseFloat(b.cpa)?a:b;});
-  const bestCVR=stats.reduce(function(a,b){return parseFloat(a.cvr)>parseFloat(b.cvr)?a:b;});
-  const worstCPA=stats.reduce(function(a,b){return parseFloat(a.cpa)>parseFloat(b.cpa)?a:b;});
-  var ihtml='';
-  [{label:'Most Cost Efficient',value:bestCPA.p,ivalue:'CPA: $'+bestCPA.cpa,desc:'Lowest cost per acquisition. CTR of '+bestCPA.ctr+'% with '+bestCPA.convShare+'% of conversions at only '+bestCPA.spendShare+'% of budget.',color:COLORS[bestCPA.p]},
-   {label:'Highest Conversion Rate',value:bestCVR.p,ivalue:'CVR: '+bestCVR.cvr+'%',desc:'Best at converting clicks to customers. Drives '+bestCVR.convShare+'% of total conversions with a CPA of $'+bestCVR.cpa+'.',color:COLORS[bestCVR.p]},
-   {label:'Budget Efficiency Gap',value:worstCPA.p,ivalue:'CPA: $'+worstCPA.cpa,desc:'Consumes '+worstCPA.spendShare+'% of budget but delivers only '+worstCPA.convShare+'% of conversions. Highest CPA.',color:COLORS[worstCPA.p]}
-  ].forEach(function(i){
-    ihtml+='<div class="insight-item"><div class="i-label">'+i.label+'</div><div class="i-value" style="color:'+i.color+'">'+i.value+' &mdash; '+i.ivalue+'</div><div class="i-desc">'+i.desc+'</div></div>';
+  var bestCPA=stats.reduce(function(a,b){return parseFloat(a.cpa)<parseFloat(b.cpa)?a:b;});
+  var bestCVR=stats.reduce(function(a,b){return parseFloat(a.cvr)>parseFloat(b.cvr)?a:b;});
+  var worstCPA=stats.reduce(function(a,b){return parseFloat(a.cpa)>parseFloat(b.cpa)?a:b;});
+  var bestCPC=stats.reduce(function(a,b){return parseFloat(a.cpc)<parseFloat(b.cpc)?a:b;});
+  var ttStat=stats.find(function(s){return s.p==='TikTok';});
+  var fbStat=stats.find(function(s){return s.p==='Facebook';});
+  var ggStat=stats.find(function(s){return s.p==='Google';});
+
+  // Section 1: Efficiency (3 cards)
+  var ig1='';
+  [{label:'Most Cost Efficient',value:bestCPA.p,ivalue:'CPA: $'+bestCPA.cpa,desc:'Lowest cost per acquisition. Delivers '+bestCPA.convShare+'% of conversions at only '+bestCPA.spendShare+'% of budget — highest return on ad spend across all three channels.',color:COLORS[bestCPA.p]},
+   {label:'Highest Conversion Rate',value:bestCVR.p,ivalue:'CVR: '+bestCVR.cvr+'%',desc:'Best at turning clicks into customers. High purchase intent and strong ad alignment drive '+bestCVR.convShare+'% of total conversions despite mid-tier spend share of '+bestCVR.spendShare+'%.',color:COLORS[bestCVR.p]},
+   {label:'Lowest Cost per Click',value:bestCPC.p,ivalue:'CPC: $'+bestCPC.cpc,desc:'Cheapest traffic by click cost, making it the top reach channel. However its CVR of '+stats.find(function(s){return s.p===bestCPC.p;}).cvr+'% means more clicks are needed to produce each conversion.',color:COLORS[bestCPC.p]}
+  ].forEach(function(i){ig1+='<div class="insight-item"><div class="i-label">'+i.label+'</div><div class="i-value" style="color:'+i.color+'">'+i.value+' &mdash; '+i.ivalue+'</div><div class="i-desc">'+i.desc+'</div></div>';});
+  document.getElementById('insightGrid').innerHTML=ig1;
+
+  // Section 2: Channel Roles (2 cards)
+  var ig2='';
+  [{label:'Reach vs Intent: Channel Roles',value:'TikTok = Awareness · Google = Conversion · Facebook = Balance',ivalue:'',
+    desc:'TikTok delivers '+ttStat.impShare+'% of impressions (top-of-funnel awareness) but converts at only '+ttStat.cvr+'% CVR. Google captures less reach but converts at '+ggStat.cvr+'% — signaling high-intent, bottom-of-funnel traffic. Facebook balances both with CTR '+fbStat.ctr+'% and CVR '+fbStat.cvr+'%, making it a full-funnel channel.',color:'var(--accent)'},
+   {label:'Spend vs Output Imbalance',value:'Budget Allocation vs Conversion Return',ivalue:'',
+    desc:'TikTok: '+ttStat.spendShare+'% spend → '+ttStat.convShare+'% conversions (CPA $'+ttStat.cpa+'). Google: '+ggStat.spendShare+'% spend → '+ggStat.convShare+'% conversions (CPA $'+ggStat.cpa+'). Facebook: '+fbStat.spendShare+'% spend → '+fbStat.convShare+'% conversions (CPA $'+fbStat.cpa+'). Google has the most balanced spend-to-output ratio.',color:'var(--gg)'}
+  ].forEach(function(i){ig2+='<div class="insight-item"><div class="i-label">'+i.label+'</div><div class="i-value" style="color:'+i.color+'">'+i.value+'</div><div class="i-desc">'+i.desc+'</div></div>';});
+  document.getElementById('insightGrid2').innerHTML=ig2;
+
+  // Section 3: Trend & Volume (2 cards)
+  var dates=[...new Set(raw.map(function(r){return r.date;}))].sort();
+  var mid=Math.floor(dates.length/2);
+  var firstHalf=dates.slice(0,mid);
+  var secondHalf=dates.slice(mid);
+  var trendStats=platforms.map(function(p){
+    var d=byP[p];
+    var h1=d.filter(function(r){return firstHalf.indexOf(r.date)>-1;});
+    var h2=d.filter(function(r){return secondHalf.indexOf(r.date)>-1;});
+    var cpa1=sumBy(h1,'cost')/sumBy(h1,'conversions');
+    var cpa2=sumBy(h2,'cost')/sumBy(h2,'conversions');
+    return {p:p,cpa1:cpa1.toFixed(2),cpa2:cpa2.toFixed(2),delta:((cpa2-cpa1)/cpa1*100).toFixed(1)};
   });
-  document.getElementById('insightGrid').innerHTML=ihtml;
-  document.getElementById('recText').textContent=worstCPA.p+' absorbs '+worstCPA.spendShare+'% of total budget but returns the weakest CPA at $'+worstCPA.cpa+'. Reallocating 20-30% of '+worstCPA.p+' budget toward '+bestCPA.p+' (CPA $'+bestCPA.cpa+') and '+bestCVR.p+' (CVR '+bestCVR.cvr+'%) is projected to reduce blended CPA by 15-20% while maintaining overall conversion volume.';
+  var ig3='';
+  var trendDesc=trendStats.map(function(t){return t.p+' Jan 1-15: $'+t.cpa1+' → Jan 16-30: $'+t.cpa2+' ('+t.delta+'%)';}).join(' | ');
+  [{label:'CPA Trend: First vs Second Half of Month',value:trendStats.map(function(t){var arrow=parseFloat(t.delta)<0?'↓':'↑';return t.p+' '+arrow+t.delta+'%';}).join(' · '),ivalue:'',
+    desc:trendDesc,color:'var(--accent)'},
+   {label:'Cross-Channel Funnel Summary',value:'$'+Math.round(totalCst).toLocaleString()+' spend · '+totalCnv.toLocaleString()+' conversions',ivalue:'',
+    desc:totalImp.toLocaleString()+' impressions → '+totalClk.toLocaleString()+' clicks (CTR '+(totalClk/totalImp*100).toFixed(2)+'%) → '+totalCnv.toLocaleString()+' conversions (CVR '+(totalCnv/totalClk*100).toFixed(2)+'%). Blended CPA: $'+(totalCst/totalCnv).toFixed(2)+'. Total 30-day investment: $'+Math.round(totalCst).toLocaleString()+'.',color:'var(--fb)'}
+  ].forEach(function(i){ig3+='<div class="insight-item"><div class="i-label">'+i.label+'</div><div class="i-value" style="color:'+i.color+'">'+i.value+'</div><div class="i-desc">'+i.desc+'</div></div>';});
+  document.getElementById('insightGrid3').innerHTML=ig3;
+
+  document.getElementById('recText').textContent=worstCPA.p+' absorbs '+worstCPA.spendShare+'% of total budget but returns the weakest CPA at $'+worstCPA.cpa+' and only '+worstCPA.convShare+'% of conversions. Reallocating 20-30% of '+worstCPA.p+' spend toward '+bestCPA.p+' (CPA $'+bestCPA.cpa+') and '+bestCVR.p+' (CVR '+bestCVR.cvr+'%) is projected to reduce blended CPA by 15-20% while maintaining total conversion volume. Retain '+worstCPA.p+' at a reduced allocation for its top-of-funnel reach value ('+worstCPA.impShare+'% of total impressions).';
 }
 function renderAll(){
   renderKPIs();
