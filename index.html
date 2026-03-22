@@ -301,6 +301,15 @@ function renderKPIs(){
 Chart.defaults.color = '#6b7280';
 Chart.defaults.borderColor = '#1e2128';
 Chart.defaults.font.family = 'DM Mono';
+Chart.defaults.plugins.tooltip.backgroundColor = '#1e2128';
+Chart.defaults.plugins.tooltip.titleColor = '#e8eaf0';
+Chart.defaults.plugins.tooltip.bodyColor = '#9ca3af';
+Chart.defaults.plugins.tooltip.borderColor = '#374151';
+Chart.defaults.plugins.tooltip.borderWidth = 1;
+Chart.defaults.plugins.tooltip.padding = 10;
+Chart.defaults.plugins.tooltip.cornerRadius = 6;
+Chart.defaults.plugins.tooltip.intersect = false;
+Chart.defaults.plugins.tooltip.mode = 'index';
 
 function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
 
